@@ -41,7 +41,8 @@ def main():
 
         trans = glm.translate(glm.mat4(1.0), glm.vec3(0.0, 0.0, -3.0))
 
-        rot = glm.rotate(theta, glm.vec3(0.0, 1.0, 0.0))
+        rot = glm.rotate(3.1415, glm.vec3(0.0, 0.0, 1.0))
+        rot = glm.rotate(theta, glm.vec3(0.0, 1.0, 0.0)) * rot
         ren.setmat4(basic_shader, "proj", proj)
         ren.setmat4(basic_shader, "model", trans*rot)
         ren.drawVertices(VAO, cube.glVertices)
