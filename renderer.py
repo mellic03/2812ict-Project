@@ -13,6 +13,20 @@ SIZEOF_FLOAT = sizeof(ctypes.c_float)
 SIZEOF_VERTEX = VERTEX_NUM_ELEMENTS*SIZEOF_FLOAT
 
 
+
+class ModelHandle:
+    VAO: GLuint
+    VBO: GLuint
+    num_elements: GLuint
+    glTextureID:  GLuint  # For simplicity, each model has one texture
+
+    def __init__(self, VAO, VBO, num_elements, glTextureID) -> None:
+        self.VAO = VAO
+        self.VBO = VBO
+        self.num_elements = num_elements
+        self.glTextureID  = glTextureID
+
+
 class Model:
     VAO: GLuint = 0
     glVertices: list[float] = [] # x y z x y z u v
@@ -77,10 +91,66 @@ class Model:
                 self.glVertices += normals  [i3[2]]
                 self.glVertices += uvs      [i3[1]]
 
+    def __loadVertices(self, vertices: list[float]):
+        NPVERTS = np.array(vertices, dtype=np.float32)
+        
+        VAO = glGenVertexArrays(1)
+        VBO = glGenBuffers(1)
 
-    def loadOBJ(self, root, obj, mtl, texture) -> None:
+        glBindVertexArray(VAO)
+        glBindBuffer(GL_ARRAY_BUFFER, VBO)
+        glBufferData(GL_ARRAY_BUFFER, NPVERTS.nbytes, NPVERTS, GL_STATIC_DRAW)    
+
+        # Position attribute
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8*SIZEOF_FLOAT, ctypes.c_void_p(0*SIZEOF_FLOAT))
+        glEnableVertexAttribArray(0)
+
+        # Normal attribute
+        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8*SIZEOF_FLOAT, ctypes.c_void_p(3*SIZEOF_FLOAT))
+        glEnableVertexAttribArray(1)
+
+        # Texture coordinate attribute
+        glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8*SIZEOF_FLOAT, ctypes.c_void_p(6*SIZEOF_FLOAT))
+        glEnableVertexAttribArray(2)
+
+        glBindBuffer(GL_ARRAY_BUFFER, 0)
+        glBindVertexArray(0)
+
+        return (VAO, VBO)
+
+    # Load an image texture from file and return an identifying GLuint ID
+    def __loadTexture(self, filepath):
+        img: SDL_Surface = IMG_Load(filepath)
+        u32_img = ctypes.cast(img[0].pixels, ctypes.POINTER(ctypes.c_uint32))
+
+        texture_id = glGenTextures(1)        
+        glBindTexture(GL_TEXTURE_2D, texture_id)
+        glPixelStorei(GL_UNPACK_ALIGNMENT, 1)
+
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, img[0].w, img[0].h, 0, GL_RGBA, GL_UNSIGNED_BYTE, u32_img)
+
+        glGenerateMipmap(GL_TEXTURE_2D)
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST)
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST)
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT)
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT)
+        glBindTexture(GL_TEXTURE_2D, 0)
+
+        return texture_id
+
+
+    def loadOBJ(self, root, obj, mtl, texture) -> ModelHandle:
         self.__load_obj(root+obj)
         self.__load_mtl(root+mtl)
+        VAO, VBO = self.__loadVertices(self.glVertices)
+        glTextureID = self.__loadTexture(root+texture)
+
+        return ModelHandle(
+            VAO, VBO,
+            len(self.glVertices) // VERTEX_NUM_ELEMENTS,
+            glTextureID
+        )
+
 
 
 
@@ -165,69 +235,22 @@ class Renderer:
         return shader_id
 
 
-    # Send vertex data to the GPU and return an identifying VAO and VBO
-    def loadVertices(self, vertices: list[float]):
-        NPVERTS = np.array(vertices, dtype=np.float32)
-        
-        VAO = glGenVertexArrays(1)
-        VBO = glGenBuffers(1)
-
-        glBindVertexArray(VAO)
-        glBindBuffer(GL_ARRAY_BUFFER, VBO)
-        glBufferData(GL_ARRAY_BUFFER, NPVERTS.nbytes, NPVERTS, GL_STATIC_DRAW)    
-
-        # Position attribute
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8*SIZEOF_FLOAT, ctypes.c_void_p(0*SIZEOF_FLOAT))
-        glEnableVertexAttribArray(0)
-
-        # Normal attribute
-        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8*SIZEOF_FLOAT, ctypes.c_void_p(3*SIZEOF_FLOAT))
-        glEnableVertexAttribArray(1)
-
-        # Texture coordinate attribute
-        glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8*SIZEOF_FLOAT, ctypes.c_void_p(6*SIZEOF_FLOAT))
-        glEnableVertexAttribArray(2)
-
-        glBindBuffer(GL_ARRAY_BUFFER, 0)
-        glBindVertexArray(0)
-
-        return (VAO, VBO)
-
-
-    # Load an image texture from file and return an identifying GLuint ID
-    def loadTexture(self, filepath):
-        img: SDL_Surface = IMG_Load(filepath)
-        u32_img = ctypes.cast(img[0].pixels, ctypes.POINTER(ctypes.c_uint32))
-
-        texture_id = glGenTextures(1)        
-        glBindTexture(GL_TEXTURE_2D, texture_id)
-        glPixelStorei(GL_UNPACK_ALIGNMENT, 1)
-
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, img[0].w, img[0].h, 0, GL_RGBA, GL_UNSIGNED_BYTE, u32_img)
-
-        glGenerateMipmap(GL_TEXTURE_2D)
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST)
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST)
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT)
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT)
-        glBindTexture(GL_TEXTURE_2D, 0)
-
-        return texture_id
-
-
-    def drawVertices(self, VAO, vertices) -> None:
-        glBindVertexArray(VAO)
-        glDrawArrays(GL_TRIANGLES, 0, len(vertices) // VERTEX_NUM_ELEMENTS)
+    def drawVertices(self, mh: ModelHandle) -> None:
+        glBindVertexArray(mh.VAO)
+        print(mh.num_elements)
+        glDrawArrays(GL_TRIANGLES, 0, mh.num_elements)
         glBindVertexArray(0)
 
 
-    def drawVerticesTextured(self, shader_id, VAO, vertices, texture_id) -> None:
-        glBindVertexArray(VAO)
+    def drawVerticesTextured(self, shader_id, mh: ModelHandle) -> None:
+        glBindVertexArray(mh.VAO)
+
         glActiveTexture(GL_TEXTURE0)
-        glBindTexture(GL_TEXTURE_2D, texture_id)
+        glBindTexture(GL_TEXTURE_2D, mh.glTextureID)
         # GL_TEXTURE0 is the active texture, so un_texture is set to 0
         self.setint(shader_id, "un_texture", 0)
-        glDrawArrays(GL_TRIANGLES, 0, len(vertices) // VERTEX_NUM_ELEMENTS)
+
+        glDrawArrays(GL_TRIANGLES, 0, mh.num_elements)
         glBindVertexArray(0)
 
 
@@ -235,9 +258,11 @@ class Renderer:
         uniform_loc = glGetUniformLocation(shader_id, name)
         glUniform1i(uniform_loc, value)
 
+
     # def setvec2(self, shader_id, name, vec: Vec2):
     #     uniform_loc = glGetUniformLocation(shader_id, name)
     #     glUniform2f(uniform_loc, vec.x, vec.y)
+
 
     def setmat4(self, shader_id, name, mat: glm.mat4):
         uniform_loc = glGetUniformLocation(shader_id, name)

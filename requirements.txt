@@ -3,3 +3,9 @@ PyGLM==2.7.0
 PyOpenGL==3.1.7
 PyOpenGL-accelerate==3.1.7
 PySDL2==0.9.16
+numpy==1.25.2
+pybullet==3.2.5
+PyGLM==2.7.0
+PyOpenGL==3.1.7
+PyOpenGL-accelerate==3.1.7
+PySDL2==0.9.16

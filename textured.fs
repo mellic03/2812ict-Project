@@ -1,8 +1,11 @@
 #version 330 core
 
 out vec4 fsout_color;
+
 in vec3 fsin_fragpos;
+in vec3 fsin_normal;
 in vec2 fsin_uv;
+
 
 uniform sampler2D un_texture;
 
