@@ -28,7 +28,6 @@ class ModelHandle:
 
 
 class Model:
-    VAO: GLuint = 0
     glVertices: list[float] = [] # x y z x y z u v
 
     def __init__(self) -> None:
@@ -46,6 +45,7 @@ class Model:
 
 
     def __load_obj(self, filepath):
+        self.glVertices = []
         fh = open(filepath, "r")
         positions = []
         normals   = []
@@ -237,7 +237,6 @@ class Renderer:
 
     def drawVertices(self, mh: ModelHandle) -> None:
         glBindVertexArray(mh.VAO)
-        print(mh.num_elements)
         glDrawArrays(GL_TRIANGLES, 0, mh.num_elements)
         glBindVertexArray(0)
 
@@ -254,6 +253,12 @@ class Renderer:
         glBindVertexArray(0)
 
 
+    def drawVerticesWireframe(self, mh: ModelHandle) -> None:
+        glBindVertexArray(mh.VAO)
+        glDrawArrays(GL_TRIANGLES, 0, mh.num_elements)
+        glBindVertexArray(0)
+
+
     def setint(self, shader_id, name, value):
         uniform_loc = glGetUniformLocation(shader_id, name)
         glUniform1i(uniform_loc, value)
@@ -262,6 +267,10 @@ class Renderer:
     # def setvec2(self, shader_id, name, vec: Vec2):
     #     uniform_loc = glGetUniformLocation(shader_id, name)
     #     glUniform2f(uniform_loc, vec.x, vec.y)
+
+    def setvec3(self, shader_id, name, vec: glm.vec3):
+        uniform_loc = glGetUniformLocation(shader_id, name)
+        glUniform3fv(uniform_loc, glm.value_ptr(vec))
 
 
     def setmat4(self, shader_id, name, mat: glm.mat4):
