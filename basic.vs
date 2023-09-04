@@ -15,7 +15,7 @@ void main()
     vec4 worldpos = model * vec4(vsin_pos, 1.0);
 
     fsin_fragpos = worldpos.xyz;
-    fsin_normal = mat3(model) * vsin_normal;
+    fsin_normal  = (model * vec4(vsin_normal, 0.0)).xyz;
 
     gl_Position = proj * worldpos;
 }

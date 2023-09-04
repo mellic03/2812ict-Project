@@ -158,19 +158,18 @@ class Renderer:
 
     __width  = 0
     __height = 0
+    __name   = ""
 
     __running = True
     __SDL_window = SDL_Window
     __SDL_gl_context = SDL_GLContext
 
-    def __init__(self, name, width, height) -> None:
-        self.__width = width
-        self.__height = height
 
+    def ren_init(self) -> None:
         SDL_Init(SDL_INIT_VIDEO)
 
         self.__SDL_window = SDL_CreateWindow(
-            name,
+            self.__name,
             SDL_WINDOWPOS_CENTERED,
             SDL_WINDOWPOS_CENTERED,
             self.__width,
@@ -187,9 +186,22 @@ class Renderer:
         glEnable(GL_CULL_FACE)
 
 
+    def __init__(self, name, width, height, startGL = False) -> None:
+        self.__width  = width
+        self.__height = height
+        self.__name   = name
+        if startGL:
+            self.ren_init()
+
+
     def running(self) -> bool:
         return self.__running
 
+    def width(self) -> int:
+        return self.__width
+
+    def height(self) -> int:
+        return self.__height
 
     def beginFrame(self) -> None:
         glBindFramebuffer(GL_FRAMEBUFFER, 0)
@@ -270,7 +282,7 @@ class Renderer:
 
     def setvec3(self, shader_id, name, vec: glm.vec3):
         uniform_loc = glGetUniformLocation(shader_id, name)
-        glUniform3fv(uniform_loc, glm.value_ptr(vec))
+        glUniform3f(uniform_loc, vec.x, vec.y, vec.z)
 
 
     def setmat4(self, shader_id, name, mat: glm.mat4):
