@@ -236,7 +236,7 @@ class Renderer:
         
         if state[SDL_SCANCODE_C]:
             cam.coupled = not cam.coupled
-
+            cam.last_pos = cam.position()
 
 
     def endFrame(self) -> None:

@@ -67,6 +67,9 @@ class Camera:
     def viewMatrix(self) -> glm.mat4:
         return self.__view * glm.inverse(self.__transform.modelMatrix())
 
+    def projection(self) -> glm.mat4:
+        return self.__projection
+
     def front(self) -> glm.vec3:
         return self.__front
 
