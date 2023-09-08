@@ -7,18 +7,18 @@ layout (location = 2) in vec2 vsin_texcoord;
 out vec3 fsin_fragpos;
 out vec3 fsin_normal;
 
-uniform mat4 proj;
+uniform mat4 un_proj;
 uniform mat4 un_view;
-uniform mat4 model;
+uniform mat4 un_model;
 
 void main()
 {
-    vec4 worldpos = model * vec4(vsin_pos, 1.0);
+    vec4 worldpos = un_model * vec4(vsin_pos, 1.0);
 
     fsin_fragpos = worldpos.xyz;
-    fsin_normal  = normalize(model * vec4(vsin_normal, 0.0)).xyz;
+    fsin_normal  = normalize(un_model * vec4(vsin_normal, 0.0)).xyz;
 
-    gl_Position = proj * un_view * worldpos;
+    gl_Position = un_proj * un_view * worldpos;
 }
 
 

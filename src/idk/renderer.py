@@ -91,7 +91,8 @@ class Model:
                 self.glVertices += normals  [i3[2]]
                 self.glVertices += uvs      [i3[1]]
 
-    def __loadVertices(self, vertices: list[float]):
+
+    def __loadVertices(self, vertices: list[float], usage=GL_STATIC_DRAW):
         NPVERTS = np.array(vertices, dtype=np.float32)
         
         VAO = glGenVertexArrays(1)
@@ -99,7 +100,7 @@ class Model:
 
         glBindVertexArray(VAO)
         glBindBuffer(GL_ARRAY_BUFFER, VBO)
-        glBufferData(GL_ARRAY_BUFFER, NPVERTS.nbytes, NPVERTS, GL_STATIC_DRAW)    
+        glBufferData(GL_ARRAY_BUFFER, NPVERTS.nbytes, NPVERTS, usage)    
 
         # Position attribute
         glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8*SIZEOF_FLOAT, ctypes.c_void_p(0*SIZEOF_FLOAT))
@@ -117,6 +118,16 @@ class Model:
         glBindVertexArray(0)
 
         return (VAO, VBO)
+
+
+    def loadVertices(self, vertices: list[float], usage=GL_STATIC_DRAW):
+        VAO, VBO = self.__loadVertices(vertices, usage)
+        return ModelHandle(
+            VAO, VBO,
+            len(vertices) // VERTEX_NUM_ELEMENTS,
+            0
+        )
+
 
     # Load an image texture from file and return an identifying GLuint ID
     def __loadTexture(self, filepath):
@@ -139,10 +150,10 @@ class Model:
         return texture_id
 
 
-    def loadOBJ(self, root, obj, mtl, texture) -> ModelHandle:
+    def loadOBJ(self, root, obj, mtl, texture, usage=GL_STATIC_DRAW) -> ModelHandle:
         self.__load_obj(root+obj)
         self.__load_mtl(root+mtl)
-        VAO, VBO = self.__loadVertices(self.glVertices)
+        VAO, VBO = self.__loadVertices(self.glVertices, usage)
         glTextureID = self.__loadTexture(root+texture)
 
         return ModelHandle(
@@ -215,64 +226,19 @@ class Renderer:
         SDL_PumpEvents()
 
 
-    def processKeyEvents(self, cam: Camera) -> None:
-
-        SPEED = 0.05
-
-        state = sdl2.SDL_GetKeyboardState(None)
-        if state[SDL_SCANCODE_D]:
-            cam.translate(SPEED * glm.vec3(-1.0, 0.0,  0.0))
-        if state[SDL_SCANCODE_A]:
-            cam.translate(SPEED * glm.vec3( 1.0, 0.0,  0.0))
-        if state[SDL_SCANCODE_W]:
-            cam.translate(SPEED * glm.vec3(0.0,  0.0, -1.0))
-        if state[SDL_SCANCODE_S]:
-            cam.translate(SPEED * glm.vec3(0.0,  0.0,  1.0))
-
-        if state[SDL_SCANCODE_Q]:
-            cam.yaw( 0.01)
-        if state[SDL_SCANCODE_E]:
-            cam.yaw(-0.01)
-        
-        if state[SDL_SCANCODE_C]:
-            cam.coupled = not cam.coupled
-            cam.last_pos = cam.position()
-
-
     def endFrame(self) -> None:
         SDL_GL_SwapWindow(self.__SDL_window)
-
-
-    # Compile a vertex and fragment shader and return an identifying GLuint ID
-    def compileShaderProgram(self, root: str, vert: str, frag: str) -> GLuint:
-        vert_src: str
-        frag_src: str
-        
-        with open(root + vert, "r") as file:
-            vert_src = file.read()
-        with open(root + frag, "r") as file:
-            frag_src = file.read()
-        
-        vert_id = shaders.compileShader(vert_src, GL_VERTEX_SHADER)
-        frag_id = shaders.compileShader(frag_src, GL_FRAGMENT_SHADER)
-        shader_id = glCreateProgram()
-        glAttachShader(shader_id, vert_id)
-        glAttachShader(shader_id, frag_id)
-        
-        glLinkProgram(shader_id)
-        if glGetProgramiv(shader_id, GL_LINK_STATUS) != GL_TRUE:
-            sys.stderr.write("Error: {0}\n".format(glGetProgramInfoLog(shader_id)))
-            exit(4)
-
-        glDeleteShader(vert_id)
-        glDeleteShader(frag_id)
-
-        return shader_id
 
 
     def drawVertices(self, mh: ModelHandle) -> None:
         glBindVertexArray(mh.VAO)
         glDrawArrays(GL_TRIANGLES, 0, mh.num_elements)
+        glBindVertexArray(0)
+
+
+    def drawVerticesMode(self, mh: ModelHandle, gl_mode) -> None:
+        glBindVertexArray(mh.VAO)
+        glDrawArrays(gl_mode, 0, mh.num_elements)
         glBindVertexArray(0)
 
 
@@ -299,10 +265,6 @@ class Renderer:
         glUniform1i(uniform_loc, value)
 
 
-    # def setvec2(self, shader_id, name, vec: Vec2):
-    #     uniform_loc = glGetUniformLocation(shader_id, name)
-    #     glUniform2f(uniform_loc, vec.x, vec.y)
-
     def setvec3(self, shader_id, name, vec: glm.vec3):
         uniform_loc = glGetUniformLocation(shader_id, name)
         glUniform3f(uniform_loc, vec.x, vec.y, vec.z)
@@ -313,6 +275,63 @@ class Renderer:
         glUniformMatrix4fv(uniform_loc, 1, GL_FALSE, glm.value_ptr(mat))
 
 
-    def drawModel(self, shader_id, model: Model) -> None:
-        glBindVertexArray(GL_VERTEX_ARRAY, model.VAO)
-        return
+
+# Compile a vertex and fragment shader and return an identifying GLuint ID
+def compileShaderProgram(root: str, vert: str, frag: str) -> GLuint:
+    vert_src: str
+    frag_src: str
+    
+    with open(root + vert, "r") as file:
+        vert_src = file.read()
+    with open(root + frag, "r") as file:
+        frag_src = file.read()
+    
+    vert_id = shaders.compileShader(vert_src, GL_VERTEX_SHADER)
+    frag_id = shaders.compileShader(frag_src, GL_FRAGMENT_SHADER)
+    shader_id = glCreateProgram()
+    glAttachShader(shader_id, vert_id)
+    glAttachShader(shader_id, frag_id)
+    
+    glLinkProgram(shader_id)
+    if glGetProgramiv(shader_id, GL_LINK_STATUS) != GL_TRUE:
+        sys.stderr.write("Error: {0}\n".format(glGetProgramInfoLog(shader_id)))
+        exit(4)
+
+    glDeleteShader(vert_id)
+    glDeleteShader(frag_id)
+
+    return shader_id
+
+
+
+def loadVertices(self, vertices: list[float], usage=GL_STATIC_DRAW):
+    NPVERTS = np.array(vertices, dtype=np.float32)
+    
+    VAO = glGenVertexArrays(1)
+    VBO = glGenBuffers(1)
+
+    glBindVertexArray(VAO)
+    glBindBuffer(GL_ARRAY_BUFFER, VBO)
+    glBufferData(GL_ARRAY_BUFFER, NPVERTS.nbytes, NPVERTS, usage)    
+
+    # Position attribute
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8*SIZEOF_FLOAT, ctypes.c_void_p(0*SIZEOF_FLOAT))
+    glEnableVertexAttribArray(0)
+
+    # Normal attribute
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8*SIZEOF_FLOAT, ctypes.c_void_p(3*SIZEOF_FLOAT))
+    glEnableVertexAttribArray(1)
+
+    # Texture coordinate attribute
+    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8*SIZEOF_FLOAT, ctypes.c_void_p(6*SIZEOF_FLOAT))
+    glEnableVertexAttribArray(2)
+
+    glBindBuffer(GL_ARRAY_BUFFER, 0)
+    glBindVertexArray(0)
+
+    return ModelHandle(
+        VAO, VBO,
+        len(vertices) // VERTEX_NUM_ELEMENTS,
+        0
+    )
+

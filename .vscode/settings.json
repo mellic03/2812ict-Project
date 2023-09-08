@@ -1,0 +1,44 @@
+{
+    "python.autoComplete.extraPaths": [
+        "${workspaceFolder}/venv/lib/python3.11/site-packages"
+    ],
+    "python.analysis.extraPaths": [
+        "${workspaceFolder}/venv/lib/python3.11/site-packages"
+    ],
+    "python.analysis.packageIndexDepths": [
+        {
+            "name": "sklearn",
+            "depth": 2
+        },
+        {
+            "name": "matplotlib",
+            "depth": 2
+        },
+        {
+            "name": "scipy",
+            "depth": 2
+        },
+        {
+            "name": "django",
+            "depth": 2
+        },
+        {
+            "name": "flask",
+            "depth": 2
+        },
+        {
+            "name": "fastapi",
+            "depth": 2
+        },
+        {
+            "name": "mediapipe",
+            "depth": 10,
+            "includeAllSymbols": true
+        }
+    ],
+    "files.associations": {
+        "__locale": "cpp",
+        "ios": "cpp",
+        "iostream": "cpp"
+    }
+}

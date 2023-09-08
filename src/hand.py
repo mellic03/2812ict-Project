@@ -12,6 +12,7 @@ from mediapipe.tasks import python
 from mediapipe.tasks.python import vision
 import math
 
+import configparser
 
 
 # Data points for a polynomial regression
@@ -45,8 +46,19 @@ CV_MP_HAND_RIGHT = True
 
 class CV_MP_Hand:
 
-    def __init__(self) -> None:
+    def __init__(self, configpath) -> None:
         self.wrist = glm.vec3(0.0) # Origin of hand
+
+        config = configparser.ConfigParser()
+        config.read(configpath)
+
+        self.hand_color = glm.vec3(
+            float(config["color"]["hand_r"]) / 255.0,
+            float(config["color"]["hand_g"]) / 255.0,
+            float(config["color"]["hand_b"]) / 255.0
+        )
+
+        self.hand_shader = idk.compileShaderProgram("src/shaders/", "basic.vs", "basic.fs")
 
         uvsphere = idk.Model()
         unit = idk.Model()
@@ -56,7 +68,7 @@ class CV_MP_Hand:
 
         pass
 
-    def __draw_joint_list(self, joint_list, whandLms, shaderID, cam, ren) -> None:
+    def __draw_joint_list(self, joint_list, whandLms, cam, ren: idk.Renderer) -> None:
         
         wrist = self.wrist
         
@@ -78,8 +90,9 @@ class CV_MP_Hand:
                 transform = glm.inverse(cam.viewMatrix()) * transform
             else:
                 transform = glm.translate(cam.last_pos) * transform
-            ren.setmat4(shaderID, "model", transform)
-            ren.setvec3(shaderID, "un_color", glm.vec3(1.0, 1.0-(i*0.25), 1.0-(i*0.25)))
+
+            ren.setmat4(self.hand_shader, "un_model", transform)
+            ren.setvec3(self.hand_shader, "un_color", glm.vec3(1.0, 1.0-(i*0.25), 1.0-(i*0.25)))
             ren.drawVertices(self.unit_h)
 
             # Knuckles
@@ -90,7 +103,7 @@ class CV_MP_Hand:
                 transform = glm.inverse(cam.viewMatrix()) * transform
             else:
                 transform = glm.translate(cam.last_pos) * transform
-            ren.setmat4(shaderID, "model", transform)
+            ren.setmat4(self.hand_shader, "un_model", transform)
             ren.drawVertices(self.uvsphere_h)
 
             # Fingertips
@@ -101,11 +114,11 @@ class CV_MP_Hand:
                 transform = glm.inverse(cam.viewMatrix()) * transform
             else:
                 transform = glm.translate(cam.last_pos) * transform
-            ren.setmat4(shaderID, "model", transform)
+            ren.setmat4(self.hand_shader, "un_model", transform)
             ren.drawVertices(self.uvsphere_h)
 
 
-    def __draw(self, handDetector, handLms, whandLms, shaderID, cam, ren) -> None:
+    def __draw(self, handDetector, handLms, whandLms, cam, ren) -> None:
 
         img_w = handDetector.img.shape[1]
         img_h = handDetector.img.shape[0]
@@ -134,11 +147,15 @@ class CV_MP_Hand:
         self.wrist = [(wrist.x-0.5), (wrist.y-0.75), wrist.z - 1.0 + hand_dist]
 
         for joint_list in JOINT_LISTS:
-            self.__draw_joint_list(joint_list, whandLms, shaderID, cam, ren)
+            self.__draw_joint_list(joint_list, whandLms, cam, ren)
 
 
-    def draw(self, handDetector, shaderID, cam, ren: idk.Renderer) -> None:
+    def draw(self, handDetector, cam: idk.Camera, ren: idk.Renderer) -> None:
+
+        glUseProgram(self.hand_shader)
+        ren.setmat4(self.hand_shader, "un_proj", cam.projection())
+
         results = handDetector.m_results
         if results and results.multi_hand_landmarks:
             for (handLms, whandLms) in zip(results.multi_hand_landmarks, results.multi_hand_world_landmarks):
-                self.__draw(handDetector, handLms, whandLms, shaderID, cam, ren)
+                self.__draw(handDetector, handLms, whandLms, cam, ren)
