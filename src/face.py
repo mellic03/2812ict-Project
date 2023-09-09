@@ -12,28 +12,12 @@ from mediapipe.tasks.python import vision
 import math
 
 import configparser
-
-import ctypes
-import os
-
-dir_path = os.path.dirname(os.path.realpath(__file__))
-lib = ctypes.cdll.LoadLibrary(dir_path + "/process_verts.so")
-fun = lib.process_vertices
-fun.restype = None
-fun.argtypes = [
-    np.ctypeslib.ndpointer(ctypes.c_float, flags="C_CONTIGUOUS"),
-    ctypes.c_size_t
-]
-
-def process_vertices(arr: np.ndarray):
-    fun(arr, arr.size)
-
-
+import geometrymethods as geom
 
 from face_vertices import *
 
 
-class CV_MP_Face:
+class FaceRenderer:
 
     def __init__(self, configpath: str) -> None:
         config = configparser.ConfigParser()
@@ -85,23 +69,7 @@ class CV_MP_Face:
             vertices += [ 0.0,  0.0 ]
 
         npverts = np.array(vertices, dtype=np.float32)
-        process_vertices(npverts)
-
-
-        # # Calculate normals
-        # for i in range(0, len(vertices), 3*8):
-        #     p0 = vertices[i+0*8 : i+0*8+3]
-        #     p1 = vertices[i+1*8 : i+1*8+3]
-        #     p2 = vertices[i+2*8 : i+2*8+3]
-
-        #     p0 = glm.vec3(p0[0], p0[1], p0[2])
-        #     p1 = glm.vec3(p1[0], p1[1], p1[2])
-        #     p2 = glm.vec3(p2[0], p2[1], p2[2])
-
-        #     normal = glm.normalize(glm.cross(p1-p0, p2-p0))
-        #     vertices[i+0*8+4 : i+0*8+7] = [normal.x, normal.y, normal.z]
-        #     vertices[i+1*8+4 : i+1*8+7] = [normal.x, normal.y, normal.z]
-        #     vertices[i+2*8+4 : i+2*8+7] = [normal.x, normal.y, normal.z]
+        geom.process_vertices(npverts)
 
 
 
@@ -117,7 +85,7 @@ class CV_MP_Face:
             * glm.scale(glm.vec3(2.0))
             * glm.rotate(self.theta, glm.vec3(0.0, 1.0, 0.0))
         )
-        ren.drawVertices(self.facemodel_h)
+        idk.drawVertices(self.facemodel_h)
 
 
         vertices = []
@@ -205,7 +173,7 @@ class CV_MP_Face:
             * glm.scale(glm.vec3(2.0))
             * glm.rotate(self.theta, glm.vec3(0.0, 1.0, 0.0))
         )
-        ren.drawVertices(self.facemodel_h)
+        idk.drawVertices(self.facemodel_h)
 
 
 

@@ -1,6 +1,10 @@
 #include <iostream>
 #include <cmath>
 
+// #include <GL/glew.h>
+// #include <GL/gl.h>
+
+
 struct vec2
 {
     union { float x, r; };
@@ -28,7 +32,7 @@ vec3 operator - (const vec3 &u, const vec3 &v)
 }
 
 
-vec3 &operator/= (vec3 &v, float f)
+vec3 &operator /= (vec3 &v, float f)
 {
     v.x /= f; v.y /= f; v.z /= f;
     return v;

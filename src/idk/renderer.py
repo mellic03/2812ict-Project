@@ -230,17 +230,6 @@ class Renderer:
         SDL_GL_SwapWindow(self.__SDL_window)
 
 
-    def drawVertices(self, mh: ModelHandle) -> None:
-        glBindVertexArray(mh.VAO)
-        glDrawArrays(GL_TRIANGLES, 0, mh.num_elements)
-        glBindVertexArray(0)
-
-
-    def drawVerticesMode(self, mh: ModelHandle, gl_mode) -> None:
-        glBindVertexArray(mh.VAO)
-        glDrawArrays(gl_mode, 0, mh.num_elements)
-        glBindVertexArray(0)
-
 
     def drawVerticesTextured(self, shader_id, mh: ModelHandle) -> None:
         glBindVertexArray(mh.VAO)
@@ -304,7 +293,7 @@ def compileShaderProgram(root: str, vert: str, frag: str) -> GLuint:
 
 
 
-def loadVertices(self, vertices: list[float], usage=GL_STATIC_DRAW):
+def loadVertices(vertices: list[float], usage=GL_STATIC_DRAW):
     NPVERTS = np.array(vertices, dtype=np.float32)
     
     VAO = glGenVertexArrays(1)
@@ -335,3 +324,49 @@ def loadVertices(self, vertices: list[float], usage=GL_STATIC_DRAW):
         0
     )
 
+
+
+def loadVerticesIndexed(vertices: list[float], indices: list[int], usage=GL_STATIC_DRAW):
+    NP_VERTICES = np.array(vertices, dtype=np.float32)
+    NP_INDICES = np.array(indices, dtype=np.uint32)
+    
+    VAO = glGenVertexArrays(1)
+    VBO = glGenBuffers(1)
+    IBO = glGenBuffers(1)
+
+    glBindVertexArray(VAO)
+
+    glBindBuffer(GL_ARRAY_BUFFER, VBO)
+    glBufferData(GL_ARRAY_BUFFER, NP_VERTICES.nbytes, NP_VERTICES, usage)    
+
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, IBO)
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, NP_INDICES.nbytes, NP_INDICES, usage)    
+
+    # Position attribute
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5*SIZEOF_FLOAT, ctypes.c_void_p(0*SIZEOF_FLOAT))
+    glEnableVertexAttribArray(0)
+
+    # Texture coordinate attribute
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5*SIZEOF_FLOAT, ctypes.c_void_p(3*SIZEOF_FLOAT))
+    glEnableVertexAttribArray(1)
+
+    glBindVertexArray(0)
+
+    return ModelHandle(
+        VAO, IBO,
+        len(indices),
+        0
+    )
+
+
+
+def drawVertices(mh: ModelHandle, gl_mode=GL_TRIANGLES) -> None:
+    glBindVertexArray(mh.VAO)
+    glDrawArrays(gl_mode, 0, mh.num_elements)
+    glBindVertexArray(0)
+
+
+def drawVerticesIndexed(mh: ModelHandle) -> None:
+    glBindVertexArray(mh.VAO)
+    glDrawElements(GL_TRIANGLES, mh.num_elements, GL_UNSIGNED_INT, ctypes.c_void_p(0))
+    glBindVertexArray(0)

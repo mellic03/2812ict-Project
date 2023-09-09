@@ -44,7 +44,7 @@ CV_MP_HAND_LEFT  = False
 CV_MP_HAND_RIGHT = True
 
 
-class CV_MP_Hand:
+class HandRenderer:
 
     def __init__(self, configpath) -> None:
         self.wrist = glm.vec3(0.0) # Origin of hand
@@ -93,7 +93,7 @@ class CV_MP_Hand:
 
             ren.setmat4(self.hand_shader, "un_model", transform)
             ren.setvec3(self.hand_shader, "un_color", glm.vec3(1.0, 1.0-(i*0.25), 1.0-(i*0.25)))
-            ren.drawVertices(self.unit_h)
+            idk.drawVertices(self.unit_h)
 
             # Knuckles
             pos_scale = glm.scale(glm.vec3(0.03))
@@ -104,7 +104,7 @@ class CV_MP_Hand:
             else:
                 transform = glm.translate(cam.last_pos) * transform
             ren.setmat4(self.hand_shader, "un_model", transform)
-            ren.drawVertices(self.uvsphere_h)
+            idk.drawVertices(self.uvsphere_h)
 
             # Fingertips
             pos_scale = glm.translate(glm.vec3(0.0, 0.0, -dist)) * glm.scale(glm.vec3(0.03))
@@ -115,7 +115,7 @@ class CV_MP_Hand:
             else:
                 transform = glm.translate(cam.last_pos) * transform
             ren.setmat4(self.hand_shader, "un_model", transform)
-            ren.drawVertices(self.uvsphere_h)
+            idk.drawVertices(self.uvsphere_h)
 
 
     def __draw(self, handDetector, handLms, whandLms, cam, ren) -> None:
@@ -154,6 +154,7 @@ class CV_MP_Hand:
 
         glUseProgram(self.hand_shader)
         ren.setmat4(self.hand_shader, "un_proj", cam.projection())
+        ren.setmat4(self.hand_shader, "un_view", cam.viewMatrix())
 
         results = handDetector.m_results
         if results and results.multi_hand_landmarks:
