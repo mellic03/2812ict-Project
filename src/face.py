@@ -3,6 +3,7 @@ from OpenGL.GL import *
 import glm as glm
 
 import idk
+from sdl2 import *
 
 import numpy as np
 import cv2 as cv
@@ -12,16 +13,16 @@ from mediapipe.tasks.python import vision
 import math
 
 import configparser
-import geometrymethods as geom
+import libgeometry as geom
 
 from face_vertices import *
 
 
 class FaceRenderer:
 
-    def __init__(self, configpath: str) -> None:
+    def __reload_ini(self) -> None:
         config = configparser.ConfigParser()
-        config.read(configpath)
+        config.read(self.config_path)
 
         self.skin_color = glm.vec3(
             float(config["color"]["skin_r"]) / 255.0,
@@ -34,148 +35,79 @@ class FaceRenderer:
             float(config["color"]["iris_b"]) / 255.0
         )
 
+        texture_path = config["general"]["texture_path"]
+        if texture_path != "":
+            texture_path = texture_path.encode('utf-8')
+            self.face_mh.glTextureID = idk.loadTexture(texture_path)
 
-        self.face_shader = idk.compileShaderProgram("src/shaders/", "basic.vs", "basic.fs")
+
+
+    def __init__(self, configpath: str) -> None:
+        self.config_path = configpath
+
+        self.face_shader = idk.compileShaderProgram("src/shaders/", "indexed.vs", "indexed.fs")
         self.iris_shader = idk.compileShaderProgram("src/shaders/", "basic.vs", "basic2.fs")
+        self.vertices, self.indices = geom.load_CFM("data/vertices.txt", "data/indices.txt")
+        self.face_mh = idk.loadVerticesIndexed(self.vertices, self.indices, GL_STATIC_DRAW)
 
-        uvsphere = idk.Model()
-        unit = idk.Model()
-        facemodel = idk.Model()
+        sphere = idk.Model()
+        self.sphere_mh = sphere.loadOBJ(b"models/icosphere.obj", b"textures/face.png")
 
-        self.uvsphere_h = uvsphere.loadOBJ(b"models/cube/", b"icosphere.obj", b"cube.mtl", b"container.png")
-        self.unit_h = unit.loadOBJ(b"models/cube/", b"icosphere.obj", b"cube.mtl", b"container.png")
-        self.facemodel_h = facemodel.loadOBJ(
-            b"models/cube/", b"icosphere.obj",
-            b"cube.mtl", b"container.png",
-            GL_STREAM_DRAW
-        )        
+        self.__reload_ini()
         self.theta = 0.0
+
 
 
     def __draw(self, faceDetector, facelms, cam, ren: idk.Renderer) -> None:
         # self.theta += 0.005
-
+        
         img_w = 640
         img_h = 480
         aspect = img_w / img_h
 
-        vertices = []
+        for i in range(0, len(facelms.landmark)):
+            if 8*i >= self.vertices.size:
+                break
 
-        for i in range(0, len(FACEMESH_TESSELATION)):
-            idx = FACEMESH_TESSELATION[i][0]
-            v0 = facelms.landmark[idx]
-            vertices += [aspect*(v0.x-0.5), (v0.y-0.5), v0.z]
-            vertices += [ 0.0,  1.0, 0.0 ]
-            vertices += [ 0.0,  0.0 ]
-
-        npverts = np.array(vertices, dtype=np.float32)
-        geom.process_vertices(npverts)
+            v0 = facelms.landmark[i]
+            self.vertices[8*i + 0] = aspect*(v0.x-0.5)
+            self.vertices[8*i + 1] = (v0.y-0.5)
+            self.vertices[8*i + 2] = v0.z
 
 
+        geom.calculate_normals(self.vertices)
+        glBindVertexArray(self.face_mh.VAO)
+        glBindBuffer(GL_ARRAY_BUFFER, self.face_mh.VBO)
+        glBufferData(GL_ARRAY_BUFFER, self.vertices.nbytes, self.vertices, GL_STREAM_DRAW)    
 
-        # NPVERTS = np.array(vertices, dtype=np.float32)
-        glBindVertexArray(self.facemodel_h.VAO)
-        glBindBuffer(GL_ARRAY_BUFFER, self.facemodel_h.VBO)
-        glBufferData(GL_ARRAY_BUFFER, npverts.nbytes, npverts, GL_STREAM_DRAW)    
+
+        avg = glm.vec3(0.0)
+
+        for idxpair in FACEMESH_LEFT_IRIS:
+            idx = idxpair[0]
+            avg += glm.vec3(
+                aspect*(facelms.landmark[idx].x - 0.5),
+                facelms.landmark[idx].y - 0.5,
+                facelms.landmark[idx].z
+            )
+        avg /= len(FACEMESH_LEFT_IRIS)
+
+
+        transform = glm.translate(glm.vec3(-2.0, -1.5, 0.0)+avg)* glm.scale(glm.vec3(0.1)) * glm.rotate(self.theta, glm.vec3(0.0, 1.0, 0.0))
+
+        glUseProgram(self.iris_shader)
+        ren.setmat4(self.iris_shader, "un_model", transform)
+        idk.drawVertices(self.sphere_mh)
+
+
+        transform = glm.translate(
+            glm.vec3(-2.0, -1.5, 0.0)) * glm.scale(glm.vec3(2.0)) * glm.rotate(self.theta, glm.vec3(0.0, 1.0, 0.0)
+        )
 
         glUseProgram(self.face_shader)
         ren.setvec3(self.face_shader, "un_color", self.skin_color)
-        ren.setmat4(self.face_shader, "un_model", glm.translate(
-            glm.vec3(-2.0, -1.5, 0.0))
-            * glm.scale(glm.vec3(2.0))
-            * glm.rotate(self.theta, glm.vec3(0.0, 1.0, 0.0))
-        )
-        idk.drawVertices(self.facemodel_h)
-
-
-        vertices = []
-        for i in range(0, len(FACEMESH_LEFT_IRIS), 4):
-            idx0 = FACEMESH_LEFT_IRIS[i][0]
-            idx1 = FACEMESH_LEFT_IRIS[i+1][0]
-            idx2 = FACEMESH_LEFT_IRIS[i+2][0]
-            idx3 = FACEMESH_LEFT_IRIS[i+3][0]
-
-            v0 = facelms.landmark[idx0]
-            v1 = facelms.landmark[idx1]
-            v2 = facelms.landmark[idx2]
-            v3 = facelms.landmark[idx3]
-
-            vertices += [aspect*(v0.x-0.5), (v0.y-0.5), v0.z]
-            vertices += [ 0.0,  1.0, 0.0 ]
-            vertices += [ 0.0,  0.0 ]
-
-            vertices += [aspect*(v1.x-0.5), (v1.y-0.5), v1.z]
-            vertices += [ 0.0,  1.0, 0.0 ]
-            vertices += [ 0.0,  0.0 ]
-
-            vertices += [aspect*(v2.x-0.5), (v2.y-0.5), v2.z]
-            vertices += [ 0.0,  1.0, 0.0 ]
-            vertices += [ 0.0,  0.0 ]
-
-            vertices += [aspect*(v2.x-0.5), (v2.y-0.5), v2.z]
-            vertices += [ 0.0,  1.0, 0.0 ]
-            vertices += [ 0.0,  0.0 ]
-
-            vertices += [aspect*(v3.x-0.5), (v3.y-0.5), v3.z]
-            vertices += [ 0.0,  1.0, 0.0 ]
-            vertices += [ 0.0,  0.0 ]
-
-            vertices += [aspect*(v0.x-0.5), (v0.y-0.5), v0.z]
-            vertices += [ 0.0,  1.0, 0.0 ]
-            vertices += [ 0.0,  0.0 ]
-
-
-        for i in range(0, len(FACEMESH_RIGHT_IRIS), 4):
-            idx0 = FACEMESH_RIGHT_IRIS[i][0]
-            idx1 = FACEMESH_RIGHT_IRIS[i+1][0]
-            idx2 = FACEMESH_RIGHT_IRIS[i+2][0]
-            idx3 = FACEMESH_RIGHT_IRIS[i+3][0]
-
-            v0 = facelms.landmark[idx0]
-            v1 = facelms.landmark[idx1]
-            v2 = facelms.landmark[idx2]
-            v3 = facelms.landmark[idx3]
-
-            vertices += [aspect*(v0.x-0.5), (v0.y-0.5), v0.z]
-            vertices += [ 0.0,  1.0, 0.0 ]
-            vertices += [ 0.0,  0.0 ]
-
-            vertices += [aspect*(v1.x-0.5), (v1.y-0.5), v1.z]
-            vertices += [ 0.0,  1.0, 0.0 ]
-            vertices += [ 0.0,  0.0 ]
-
-            vertices += [aspect*(v2.x-0.5), (v2.y-0.5), v2.z]
-            vertices += [ 0.0,  1.0, 0.0 ]
-            vertices += [ 0.0,  0.0 ]
-
-            vertices += [aspect*(v2.x-0.5), (v2.y-0.5), v2.z]
-            vertices += [ 0.0,  1.0, 0.0 ]
-            vertices += [ 0.0,  0.0 ]
-
-            vertices += [aspect*(v3.x-0.5), (v3.y-0.5), v3.z]
-            vertices += [ 0.0,  1.0, 0.0 ]
-            vertices += [ 0.0,  0.0 ]
-
-            vertices += [aspect*(v0.x-0.5), (v0.y-0.5), v0.z]
-            vertices += [ 0.0,  1.0, 0.0 ]
-            vertices += [ 0.0,  0.0 ]
-
-
-        NPVERTS2 = np.array(vertices, dtype=np.float32)
-        glBindVertexArray(self.facemodel_h.VAO)
-        glBindBuffer(GL_ARRAY_BUFFER, self.facemodel_h.VBO)
-        glBufferData(GL_ARRAY_BUFFER, NPVERTS2.nbytes, NPVERTS2, GL_STREAM_DRAW)    
-
-        glUseProgram(self.iris_shader)
-        ren.setvec3(self.iris_shader, "un_color", self.iris_color)
-        ren.setmat4(self.iris_shader, "un_model", glm.translate(
-            glm.vec3(-2.0, -1.5, 0.0))
-            * glm.scale(glm.vec3(2.0))
-            * glm.rotate(self.theta, glm.vec3(0.0, 1.0, 0.0))
-        )
-        idk.drawVertices(self.facemodel_h)
-
-
+        ren.setmat4(self.face_shader, "un_model", transform)
+        idk.drawVerticesIndexedTextured(self.face_mh, self.face_shader)
 
 
 
@@ -194,3 +126,9 @@ class FaceRenderer:
             for facelms in results.multi_face_landmarks:
                 self.__draw(faceDetector, facelms, cam, ren)
 
+
+
+    def onEvent(self, sdl_keystate) -> None:
+
+        if sdl_keystate[SDL_SCANCODE_F5]:
+            self.__reload_ini()

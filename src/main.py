@@ -17,6 +17,8 @@ import cv2 as cv
 import sys
 import os
 
+import libgeometry as geom
+
 from detectors import *
 from hand import HandRenderer
 from face import FaceRenderer
@@ -31,6 +33,7 @@ img_h = None
 
 
 def cv_thread_fn( handDetector: HandDetector, faceDetector: FaceDetector ):
+
     cap = cv.VideoCapture(0)
     cap.set(cv.CAP_PROP_FRAME_WIDTH,  640)
     cap.set(cv.CAP_PROP_FRAME_HEIGHT, 480)
@@ -96,20 +99,15 @@ def gl_thread_fn( handDetector: HandDetector, faceDetector: FaceDetector ):
     inputHandler = SDL2_InputHandler()
 
     room = idk.Model()
-    room_h = room.loadOBJ(b"models/cube/", b"plane.obj", b"cube.mtl", b"palette.png")
+    room_h = room.loadOBJ(b"models/plane.obj", b"textures/palette.png")
 
     tex_shader = idk.compileShaderProgram("src/shaders/", "textured.vs", "textured.fs")
-    idx_shader = idk.compileShaderProgram("src/shaders/", "indexed.vs", "basic.fs")
 
     glUseProgram(tex_shader)
     ren.setmat4(tex_shader, "proj", cam.projection())
 
     handObj = HandRenderer("config/hand.ini")
     faceObj = FaceRenderer("config/face.ini")
-
-
-    vertices, indices = loadBuffer()
-    face_mh = idk.loadVerticesIndexed(vertices, indices, GL_STATIC_DRAW)
 
 
     while (ren.running()):
@@ -123,40 +121,20 @@ def gl_thread_fn( handDetector: HandDetector, faceDetector: FaceDetector ):
         if results and results.multi_face_landmarks:
             faceObj.draw(faceDetector, cam, ren)
 
-        # glUseProgram(tex_shader)
-        # ren.setmat4(tex_shader, "un_view",      cam.viewMatrix())
-        # ren.setvec3(tex_shader, "un_view_pos",  cam.position()  )
-        # ren.setvec3(tex_shader, "un_color",     glm.vec3(1.0)   )
-        # ren.setmat4(tex_shader, "model",        glm.mat4(1.0)   )
-        # ren.drawVerticesTextured(tex_shader, room_h)
+        glUseProgram(tex_shader)
+        ren.setmat4(tex_shader, "un_view",      cam.viewMatrix())
+        ren.setvec3(tex_shader, "un_view_pos",  cam.position()  )
+        ren.setvec3(tex_shader, "un_color",     glm.vec3(1.0)   )
+        ren.setmat4(tex_shader, "model",        glm.mat4(1.0)   )
+        ren.drawVerticesTextured(tex_shader, room_h)
 
-        glUseProgram(idx_shader)
-        ren.setmat4(idx_shader, "un_proj",  cam.projection())
-        ren.setmat4(idx_shader, "un_view",  cam.viewMatrix())
-        ren.setmat4(idx_shader, "un_model", glm.mat4(1.0))
-        ren.setvec3(idx_shader, "un_view_pos",  cam.position())
-        ren.setvec3(idx_shader, "un_color",  glm.vec3(0.5, 1.0, 0.7))
-
-        idk.drawVerticesIndexed(face_mh)
         inputHandler.events(cam)
+
+        state = sdl2.SDL_GetKeyboardState(None)
+        faceObj.onEvent(state)
 
         ren.endFrame()
 
-
-
-def loadBuffer():
-    vertices = []
-    indices  = []
-    
-    fh = open("data/face_vertex_buffer.txt", "r")
-    for line in fh:
-        vertices.append(float(line))
-    
-    fh = open("data/face_index_buffer.txt", "r")
-    for line in fh:
-        indices.append(int(line))
-    
-    return vertices, indices
 
 
 def main():

@@ -150,11 +150,10 @@ class Model:
         return texture_id
 
 
-    def loadOBJ(self, root, obj, mtl, texture, usage=GL_STATIC_DRAW) -> ModelHandle:
-        self.__load_obj(root+obj)
-        self.__load_mtl(root+mtl)
+    def loadOBJ(self, obj, texture, usage=GL_STATIC_DRAW) -> ModelHandle:
+        self.__load_obj(obj)
         VAO, VBO = self.__loadVertices(self.glVertices, usage)
-        glTextureID = self.__loadTexture(root+texture)
+        glTextureID = self.__loadTexture(texture)
 
         return ModelHandle(
             VAO, VBO,
@@ -265,6 +264,30 @@ class Renderer:
 
 
 
+# Load an image texture from file and return an identifying GLuint ID
+def loadTexture(filepath):
+    img: SDL_Surface = IMG_Load(filepath)
+    u32_img = ctypes.cast(img[0].pixels, ctypes.POINTER(ctypes.c_uint32))
+
+    texture_id = glGenTextures(1)        
+    glBindTexture(GL_TEXTURE_2D, texture_id)
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 1)
+
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, img[0].w, img[0].h, 0, GL_RGBA, GL_UNSIGNED_BYTE, u32_img)
+
+    glGenerateMipmap(GL_TEXTURE_2D)
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST)
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST)
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT)
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT)
+    glBindTexture(GL_TEXTURE_2D, 0)
+
+    return texture_id
+
+
+
+
+
 # Compile a vertex and fragment shader and return an identifying GLuint ID
 def compileShaderProgram(root: str, vert: str, frag: str) -> GLuint:
     vert_src: str
@@ -325,10 +348,14 @@ def loadVertices(vertices: list[float], usage=GL_STATIC_DRAW):
     )
 
 
+def setint(shader_id, name, value):
+    uniform_loc = glGetUniformLocation(shader_id, name)
+    glUniform1i(uniform_loc, value)
 
-def loadVerticesIndexed(vertices: list[float], indices: list[int], usage=GL_STATIC_DRAW):
-    NP_VERTICES = np.array(vertices, dtype=np.float32)
-    NP_INDICES = np.array(indices, dtype=np.uint32)
+
+def loadVerticesIndexed(vertices: np.ndarray, indices: np.ndarray, usage=GL_STATIC_DRAW):
+    NP_VERTICES = vertices
+    NP_INDICES  = indices
     
     VAO = glGenVertexArrays(1)
     VBO = glGenBuffers(1)
@@ -343,21 +370,24 @@ def loadVerticesIndexed(vertices: list[float], indices: list[int], usage=GL_STAT
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, NP_INDICES.nbytes, NP_INDICES, usage)    
 
     # Position attribute
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5*SIZEOF_FLOAT, ctypes.c_void_p(0*SIZEOF_FLOAT))
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8*SIZEOF_FLOAT, ctypes.c_void_p(0*SIZEOF_FLOAT))
     glEnableVertexAttribArray(0)
 
-    # Texture coordinate attribute
-    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5*SIZEOF_FLOAT, ctypes.c_void_p(3*SIZEOF_FLOAT))
+    # Normal attribute
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8*SIZEOF_FLOAT, ctypes.c_void_p(3*SIZEOF_FLOAT))
     glEnableVertexAttribArray(1)
+
+    # Texture coordinate attribute
+    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8*SIZEOF_FLOAT, ctypes.c_void_p(6*SIZEOF_FLOAT))
+    glEnableVertexAttribArray(2)
 
     glBindVertexArray(0)
 
     return ModelHandle(
-        VAO, IBO,
+        VAO, VBO,
         len(indices),
         0
     )
-
 
 
 def drawVertices(mh: ModelHandle, gl_mode=GL_TRIANGLES) -> None:
@@ -366,7 +396,25 @@ def drawVertices(mh: ModelHandle, gl_mode=GL_TRIANGLES) -> None:
     glBindVertexArray(0)
 
 
-def drawVerticesIndexed(mh: ModelHandle) -> None:
+def drawVerticesTextured(shader_id, mh: ModelHandle) -> None:
     glBindVertexArray(mh.VAO)
-    glDrawElements(GL_TRIANGLES, mh.num_elements, GL_UNSIGNED_INT, ctypes.c_void_p(0))
+    glActiveTexture(GL_TEXTURE0)
+    glBindTexture(GL_TEXTURE_2D, mh.glTextureID)
+    setint(shader_id, "un_texture", 0)
+    glDrawArrays(GL_TRIANGLES, 0, mh.num_elements)
+    glBindVertexArray(0)
+
+
+def drawVerticesIndexed(mh: ModelHandle, gl_mode=GL_TRIANGLES) -> None:
+    glBindVertexArray(mh.VAO)
+    glDrawElements(gl_mode, mh.num_elements, GL_UNSIGNED_INT, ctypes.c_void_p(0))
+    glBindVertexArray(0)
+
+
+def drawVerticesIndexedTextured(mh: ModelHandle, shader_id, gl_mode=GL_TRIANGLES) -> None:
+    glBindVertexArray(mh.VAO)
+    glActiveTexture(GL_TEXTURE0)
+    glBindTexture(GL_TEXTURE_2D, mh.glTextureID)
+    setint(shader_id, "un_texture", 0)
+    glDrawElements(gl_mode, mh.num_elements, GL_UNSIGNED_INT, ctypes.c_void_p(0))
     glBindVertexArray(0)

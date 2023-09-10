@@ -63,8 +63,8 @@ class HandRenderer:
         uvsphere = idk.Model()
         unit = idk.Model()
         
-        self.uvsphere_h = uvsphere.loadOBJ(b"models/cube/", b"icosphere.obj", b"cube.mtl", b"container.png")
-        self.unit_h = unit.loadOBJ(b"models/cube/", b"cylinder.obj", b"cube.mtl", b"container.png")
+        self.uvsphere_h = uvsphere.loadOBJ(b"models/icosphere.obj", b"textures/container.png")
+        self.unit_h = unit.loadOBJ(b"models/cylinder.obj", b"textures/container.png")
 
         pass
 

@@ -1,4 +1,6 @@
 #include <iostream>
+#include <fstream>
+#include <stdint.h>
 #include <cmath>
 
 // #include <GL/glew.h>
@@ -72,8 +74,9 @@ struct vertex
 };
 
 
+
 extern "C" void
-process_vertices( void *ptr, size_t size )
+calculate_normals( void *ptr, size_t size )
 {
     vertex *vertices = (vertex *)ptr;
     size_t num_verts = size/8;
@@ -95,3 +98,66 @@ process_vertices( void *ptr, size_t size )
     }
 }
 
+
+
+
+/**
+ * @param verts_size number of floats in vertex array
+ * @param indices_size number of ints in indices array
+ * 
+*/
+
+extern "C" void
+load_canonical_face_model(
+    void *verts_ptr,     size_t verts_size,      const char *verts_path,
+    void *indices_ptr,   size_t indices_size,    const char *indices_path )
+{
+    float    *vertices = (float *)(verts_ptr);
+    uint32_t *indices  = (uint32_t *)(indices_ptr);
+
+    // std::cout << "verts_size: " << verts_size << "\n";
+    // std::cout << "indices_size: " << indices_size << "\n";
+
+    std::ifstream stream(verts_path);
+    std::string line;
+
+    int i = 0;
+    int count = 0;
+    while (std::getline(stream, line))
+    {
+        if (line == "")
+            continue;
+
+        vertices[i] = std::stof(line);
+        i += 1;
+        count += 1;
+
+        if (count == 3)
+        {
+            vertices[i+1] = 0.0;
+            vertices[i+2] = 0.0;
+            vertices[i+3] = 1.0;
+            i += 3;
+            count += 3;
+        }
+
+        else if (count == 8)
+        {
+            count = 0;
+        }
+    }
+
+
+
+    stream = std::ifstream(indices_path);
+
+    i = 0;
+    while (std::getline(stream, line))
+    {
+        if (line == "")
+            continue;
+
+        indices[i] = std::stoi(line);
+        i += 1;
+    }
+}
