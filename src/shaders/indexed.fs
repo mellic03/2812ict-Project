@@ -3,19 +3,19 @@
 out vec4 fsout_color;
 
 in vec3 fsin_fragpos;
-in vec3 fsin_normal;
+flat in vec3 fsin_normal;
 in vec2 fsin_texcoords;
 
-const vec3 light_pos = vec3(5.0, -5.0, -5.0);
+const vec3 light_direction = vec3(1.0, 1.0, 1.0);
 const float spec_exponent = 16;
 
 uniform vec3 un_color;
+uniform vec3 un_specular;
 uniform vec3 un_view_pos;
 uniform sampler2D un_texture;
 
 void main()
 {
-    vec3 light_direction = -light_pos;
     vec3 light_ambient = vec3(0.1);
     vec3 light_diffuse = vec3(1.0, 1.0, 1.0);
 
@@ -31,16 +31,16 @@ void main()
     float specular_f = pow(max(dot(fsin_normal, halfway_dir), 0.0), spec_exponent);
 
 
-    vec3 albedo = texture(un_texture, fsin_texcoords).rgb;
+    vec3 albedo = un_color;
+    // vec3 albedo = fsin_normal;
+    // vec3 albedo = texture(un_texture, fsin_texcoords).rgb;
 
     vec3 ambient  = albedo * light_ambient;
     vec3 diffuse  = albedo * diffuse_f * light_diffuse;
-    vec3 specular = albedo * specular_f * 1;
+    vec3 specular = albedo * specular_f * un_specular;
     vec3 result   = ambient + diffuse + specular;
 
     fsout_color = vec4(result, 1.0);
-
-    fsout_color = vec4(albedo, 1.0);
 
 }
 

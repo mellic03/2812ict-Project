@@ -34,11 +34,17 @@ class FaceRenderer:
             float(config["color"]["iris_g"]) / 255.0,
             float(config["color"]["iris_b"]) / 255.0
         )
+        self.specular = glm.vec3(
+            float(config["color"]["spec_r"]) / 255.0,
+            float(config["color"]["spec_g"]) / 255.0,
+            float(config["color"]["spec_b"]) / 255.0
+        )
 
-        texture_path = config["general"]["texture_path"]
-        if texture_path != "":
-            texture_path = texture_path.encode('utf-8')
-            self.face_mh.glTextureID = idk.loadTexture(texture_path)
+        if config.has_option("general", "texture_path"):
+            texture_path = config["general"]["texture_path"]
+            if texture_path != "":
+                texture_path = texture_path.encode('utf-8')
+                self.face_mh.glTextureID = idk.loadTexture(texture_path)
 
 
 
@@ -75,29 +81,28 @@ class FaceRenderer:
             self.vertices[8*i + 2] = v0.z
 
 
-        geom.calculate_normals(self.vertices)
+        geom.calculate_normals(self.vertices, self.indices)
         glBindVertexArray(self.face_mh.VAO)
         glBindBuffer(GL_ARRAY_BUFFER, self.face_mh.VBO)
         glBufferData(GL_ARRAY_BUFFER, self.vertices.nbytes, self.vertices, GL_STREAM_DRAW)    
 
 
-        avg = glm.vec3(0.0)
+        # avg = glm.vec3(0.0)
 
-        for idxpair in FACEMESH_LEFT_IRIS:
-            idx = idxpair[0]
-            avg += glm.vec3(
-                aspect*(facelms.landmark[idx].x - 0.5),
-                facelms.landmark[idx].y - 0.5,
-                facelms.landmark[idx].z
-            )
-        avg /= len(FACEMESH_LEFT_IRIS)
+        # for idxpair in FACEMESH_LEFT_IRIS:
+        #     idx = idxpair[0]
+        #     avg += glm.vec3(
+        #         aspect*(facelms.landmark[idx].x - 0.5),
+        #         facelms.landmark[idx].y - 0.5,
+        #         facelms.landmark[idx].z
+        #     )
+        # avg /= len(FACEMESH_LEFT_IRIS)
 
+        # transform = glm.translate(glm.vec3(-2.0, -1.5, 0.0)+avg)* glm.scale(glm.vec3(0.1)) * glm.rotate(self.theta, glm.vec3(0.0, 1.0, 0.0))
 
-        transform = glm.translate(glm.vec3(-2.0, -1.5, 0.0)+avg)* glm.scale(glm.vec3(0.1)) * glm.rotate(self.theta, glm.vec3(0.0, 1.0, 0.0))
-
-        glUseProgram(self.iris_shader)
-        ren.setmat4(self.iris_shader, "un_model", transform)
-        idk.drawVertices(self.sphere_mh)
+        # glUseProgram(self.iris_shader)
+        # ren.setmat4(self.iris_shader, "un_model", transform)
+        # idk.drawVertices(self.sphere_mh)
 
 
         transform = glm.translate(
@@ -106,6 +111,7 @@ class FaceRenderer:
 
         glUseProgram(self.face_shader)
         ren.setvec3(self.face_shader, "un_color", self.skin_color)
+        ren.setvec3(self.face_shader, "un_specular", self.specular)
         ren.setmat4(self.face_shader, "un_model", transform)
         idk.drawVerticesIndexedTextured(self.face_mh, self.face_shader)
 

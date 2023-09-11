@@ -12,18 +12,16 @@ def load_CPP_methods():
 
     METHODS = {  }
 
-    __cpp_calculate_normals = lib.calculate_normals
-    __cpp_calculate_normals.restype = None
-    __cpp_calculate_normals.argtypes = [
+    lib.calculate_normals.restype = None
+    lib.calculate_normals.argtypes = [
         np.ctypeslib.ndpointer(ctypes.c_float, flags="C_CONTIGUOUS"),
-        ctypes.c_size_t
+        np.ctypeslib.ndpointer(ctypes.c_uint32, flags="C_CONTIGUOUS"),
+        ctypes.c_size_t,
     ]
-    METHODS["calculate_normals"] = __cpp_calculate_normals
+    METHODS["calculate_normals"] = lib.calculate_normals
 
-
-    __cpp_load_facemodel = lib.load_canonical_face_model
-    __cpp_load_facemodel.restype = None
-    __cpp_load_facemodel.argtypes = [
+    lib.load_CFM.restype = None
+    lib.load_CFM.argtypes = [
         np.ctypeslib.ndpointer(ctypes.c_float, flags="C_CONTIGUOUS"),
         ctypes.c_size_t,
         ctypes.c_char_p,
@@ -31,7 +29,7 @@ def load_CPP_methods():
         ctypes.c_size_t,
         ctypes.c_char_p
     ]
-    METHODS["load_canonical_face_model"] = __cpp_load_facemodel
+    METHODS["load_CFM"] = lib.load_CFM
 
 
     return METHODS
@@ -70,25 +68,26 @@ def python_calculate_normals(arr: np.ndarray):
         p2 = glm.vec3(p2[0], p2[1], p2[2])
 
         normal = glm.normalize(glm.cross(p1-p0, p2-p0))
-        vertices[i+0*8+4 : i+0*8+7] = [normal.x, normal.y, normal.z]
-        vertices[i+1*8+4 : i+1*8+7] = [normal.x, normal.y, normal.z]
-        vertices[i+2*8+4 : i+2*8+7] = [normal.x, normal.y, normal.z]
+        vertices[i+0*8+3 : i+0*8+6] = [0.0, 0.0, -1.0] # [normal.x, normal.y, normal.z]
+        vertices[i+1*8+3 : i+1*8+6] = [0.0, 0.0, -1.0] # [normal.x, normal.y, normal.z]
+        vertices[i+2*8+3 : i+2*8+6] = [0.0, 0.0, -1.0] # [normal.x, normal.y, normal.z]
 
 
 
 
-def calculate_normals(arr: np.ndarray):
+def calculate_normals(vertices: np.ndarray, indices: np.ndarray):
     if __USE_CPP:
-        __CPP_METHODS["calculate_normals"](arr, arr.size)
+        __CPP_METHODS["calculate_normals"](vertices, indices, indices.size)
 
     else:
-        python_calculate_normals(arr)
+        python_calculate_normals(vertices)
 
 
-NUM_INDICES = 2699
+
+NUM_INDICES = 2640
 
 
-def python_load_canonical_face_model( vertices_path: str, indices_path: str ):
+def python_load_CFM( vertices_path: str, indices_path: str ):
     NUM_FLOATS  = (2340 // 5) * 8
 
     vertices = np.ndarray((NUM_FLOATS,),  dtype=np.float32)
@@ -143,12 +142,12 @@ def load_CFM( vertices_path: str, indices_path: str ):
         vpath = vertices_path.encode('utf-8')
         ipath = indices_path.encode('utf-8')
 
-        __CPP_METHODS["load_canonical_face_model"](
+        __CPP_METHODS["load_CFM"](
             vertices,   vertices.size,  vpath,
             indices,    indices.size,   ipath
         )
         return vertices, indices
 
     else:
-        vertices, indices = python_load_canonical_face_model(vertices_path, indices_path)
+        vertices, indices = python_load_CFM(vertices_path, indices_path)
         return vertices, indices
