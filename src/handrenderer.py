@@ -121,7 +121,7 @@ class HandRenderer:
 
 
         new_landmarks = np.zeros(self.landmarks.shape, dtype=np.float32)
-        geom.lmarks_to_np(handLms.landmark, new_landmarks, img_w/img_h)
+        geom.lmarks_to_np(handLms.landmark, new_landmarks, 1)
 
         for i in range(0, self.landmarks.shape[0]):
             v0 = self.landmarks[i]
@@ -133,7 +133,7 @@ class HandRenderer:
 
 
         new_landmarks = np.zeros(self.landmarks2.shape, dtype=np.float32)
-        geom.lmarks_to_np(whandLms.landmark, new_landmarks, img_w/img_h)
+        geom.lmarks_to_np(whandLms.landmark, new_landmarks, 1)
 
         for i in range(0, self.landmarks2.shape[0]):
             v0 = self.landmarks2[i]

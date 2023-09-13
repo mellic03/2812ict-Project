@@ -18,7 +18,6 @@ from detectors import *
 from handrenderer import HandRenderer
 from facerenderer import FaceRenderer
 
-import socket
 
 
 def cv_thread_fn( ren: idk.Renderer, handDetector: HandDetector, faceDetector: FaceDetector ):
