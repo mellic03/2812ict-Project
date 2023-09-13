@@ -186,7 +186,7 @@ class Renderer:
             SDL_WINDOWPOS_CENTERED,
             self.__width,
             self.__height,
-            SDL_WINDOW_OPENGL
+            SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_MAXIMIZED
         )
 
         SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3)
@@ -215,7 +215,8 @@ class Renderer:
     def height(self) -> int:
         return self.__height
 
-    def beginFrame(self) -> None:
+    def beginFrame(self, cam: Camera) -> None:
+        glViewport(0, 0, self.__width, self.__height)
         glBindFramebuffer(GL_FRAMEBUFFER, 0)
         glClearColor(0.0, 0.0, 0.0, 1.0)
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
@@ -224,6 +225,12 @@ class Renderer:
             if event.type == SDL_WINDOWEVENT:
                 if event.window.event == SDL_WINDOWEVENT_CLOSE:
                     self.__running = False
+                elif event.window.event == SDL_WINDOWEVENT_SIZE_CHANGED:
+                    self.__width = event.window.data1
+                    self.__height = event.window.data2
+
+                    cam.setProjection(cam.fov(), self.__width, self.__height)
+
 
         SDL_PumpEvents()
 

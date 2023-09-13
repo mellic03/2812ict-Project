@@ -74,7 +74,7 @@ def gl_thread_fn( ren: idk.Renderer, handDetector: HandDetector, faceDetector: F
 
         start = SDL_GetTicks64()
 
-        ren.beginFrame()
+        ren.beginFrame(cam)
 
         glUseProgram(sky_shader)
         idk.setmat4(sky_shader, "un_proj", cam.projection())
@@ -83,10 +83,10 @@ def gl_thread_fn( ren: idk.Renderer, handDetector: HandDetector, faceDetector: F
         idk.drawVerticesTextured(sky_shader, sky_mh)
 
         glUseProgram(grass_shader)
-        idk.setmat4(grass_shader, "un_proj",      cam.projection())
-        idk.setmat4(grass_shader, "un_view",      cam.viewMatrix())
-        idk.setmat4(grass_shader, "un_model",     glm.mat4(1.0))
-        idk.setvec3(grass_shader, "un_view_pos",  cam.position())
+        idk.setmat4(grass_shader, "un_proj", cam.projection())
+        idk.setmat4(grass_shader, "un_view", cam.viewMatrix())
+        idk.setmat4(grass_shader, "un_model", glm.mat4(1.0))
+        idk.setvec3(grass_shader, "un_view_pos", cam.position())
         idk.setfloat(grass_shader, "un_spec_exponent", 4)
         idk.setfloat(grass_shader, "un_spec_strength", 0.1)
         idk.drawVerticesTextured(grass_shader, grass_mh)

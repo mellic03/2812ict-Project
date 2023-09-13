@@ -76,9 +76,19 @@ class Camera:
         return self.__view * glm.inverse(self.__transform.modelMatrix())
 
 
+    def setProjection(self, fov, width, height) -> None:
+        self.__projection = glm.perspective(
+            fov,
+            width/height,
+            self.__near,
+            self.__far
+        )
+
     def projection(self) -> glm.mat4:
         return self.__projection
 
+    def fov(self) -> float:
+        return self.__fov
 
     def front(self) -> glm.vec3:
         return self.__front

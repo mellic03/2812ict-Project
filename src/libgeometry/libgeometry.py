@@ -8,10 +8,7 @@ import idk
 
 def check_USE_CPP():
     if len(sys.argv) > 1 and sys.argv[1] == "USE_CPP":
-        print("USE_CPP")
         return True
-
-    print("USE_PYTHON")
     return False
 
 USE_CPP = check_USE_CPP()
