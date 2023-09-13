@@ -8,7 +8,7 @@ class FaceDetector:
     def __init__(self) -> None:
 
         self.face_mesh = mp.solutions.face_mesh
-        self.mpFace  = mp.solutions.face_mesh.FaceMesh(refine_landmarks=True, max_num_faces=2)
+        self.mpFace  = mp.solutions.face_mesh.FaceMesh(refine_landmarks=True, max_num_faces=1)
         self.mpDraw  = mp.solutions.drawing_utils
         self.drawStyles  = mp.solutions.drawing_styles
         self.m_results = None

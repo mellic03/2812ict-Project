@@ -88,4 +88,26 @@ class Camera:
         return glm.vec3(self.__transform.modelMatrix()[3])
 
 
+    def onEvent(self, state, dtime=1.0):
+        SPEED = 3.0 * dtime
+        TURN  = 3.0 * dtime
 
+        if state[SDL_SCANCODE_D]:
+            self.translate(SPEED * glm.vec3(-1.0, 0.0,  0.0))
+        if state[SDL_SCANCODE_A]:
+            self.translate(SPEED * glm.vec3( 1.0, 0.0,  0.0))
+        if state[SDL_SCANCODE_W]:
+            self.translate(SPEED * glm.vec3(0.0,  0.0, -1.0))
+        if state[SDL_SCANCODE_S]:
+            self.translate(SPEED * glm.vec3(0.0,  0.0,  1.0))
+
+
+        if state[SDL_SCANCODE_Q]:
+            self.yaw( TURN)
+        if state[SDL_SCANCODE_E]:
+            self.yaw(-TURN)
+
+        if state[SDL_SCANCODE_R]:
+            self.pitch( TURN)
+        if state[SDL_SCANCODE_F]:
+            self.pitch(-TURN)

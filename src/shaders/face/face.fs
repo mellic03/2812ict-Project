@@ -8,11 +8,11 @@ in vec2 fsin_texcoords;
 
 const vec3 light_direction = vec3(1.0, 1.0, 1.0);
 
-uniform vec3 un_view_pos;
-uniform sampler2D un_texture;
 
+uniform vec3 un_color;
+uniform vec3 un_specular;
+uniform vec3 un_view_pos;
 uniform float un_spec_exponent;
-uniform float un_spec_strength;
 
 
 void main()
@@ -32,13 +32,12 @@ void main()
     float specular_f = pow(max(dot(fsin_normal, halfway_dir), 0.0), un_spec_exponent);
 
 
-    // vec3 albedo = un_color;
+    vec3 albedo = un_color;
     // vec3 albedo = fsin_normal;
-    vec3 albedo = texture(un_texture, fsin_texcoords).rgb;
 
     vec3 ambient  = albedo * light_ambient;
     vec3 diffuse  = albedo * diffuse_f * light_diffuse;
-    vec3 specular = albedo * specular_f * un_spec_strength;
+    vec3 specular = albedo * specular_f * un_specular;
     vec3 result   = ambient + diffuse + specular;
 
     fsout_color = vec4(result, 1.0);

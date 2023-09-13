@@ -71,7 +71,7 @@ class Model:
             elif tokens[0] == "vt":
                 uvs.append([
                     float(tokens[1]),
-                    float(tokens[2])
+                    1.0-float(tokens[2])
                 ])
 
             elif tokens[0] == "f":
@@ -150,10 +150,13 @@ class Model:
         return texture_id
 
 
-    def loadOBJ(self, obj, texture, usage=GL_STATIC_DRAW) -> ModelHandle:
+    def loadOBJ(self, obj, texture=None, usage=GL_STATIC_DRAW) -> ModelHandle:
         self.__load_obj(obj)
         VAO, VBO = self.__loadVertices(self.glVertices, usage)
-        glTextureID = self.__loadTexture(texture)
+
+        glTextureID = 0
+        if texture != None:
+            glTextureID = self.__loadTexture(texture)
 
         return ModelHandle(
             VAO, VBO,
@@ -230,37 +233,23 @@ class Renderer:
 
 
 
-    def drawVerticesTextured(self, shader_id, mh: ModelHandle) -> None:
-        glBindVertexArray(mh.VAO)
-
-        glActiveTexture(GL_TEXTURE0)
-        glBindTexture(GL_TEXTURE_2D, mh.glTextureID)
-        # GL_TEXTURE0 is the active texture, so un_texture is set to 0
-        self.setint(shader_id, "un_texture", 0)
-
-        glDrawArrays(GL_TRIANGLES, 0, mh.num_elements)
-        glBindVertexArray(0)
 
 
-    def drawVerticesWireframe(self, mh: ModelHandle) -> None:
-        glBindVertexArray(mh.VAO)
-        glDrawArrays(GL_TRIANGLES, 0, mh.num_elements)
-        glBindVertexArray(0)
+def setint(shader_id, name, value):
+    uniform_loc = glGetUniformLocation(shader_id, name)
+    glUniform1i(uniform_loc, value)
 
+def setfloat(shader_id, name, value):
+    uniform_loc = glGetUniformLocation(shader_id, name)
+    glUniform1f(uniform_loc, value)
 
-    def setint(self, shader_id, name, value):
-        uniform_loc = glGetUniformLocation(shader_id, name)
-        glUniform1i(uniform_loc, value)
+def setvec3(shader_id, name, vec: glm.vec3):
+    uniform_loc = glGetUniformLocation(shader_id, name)
+    glUniform3f(uniform_loc, vec.x, vec.y, vec.z)
 
-
-    def setvec3(self, shader_id, name, vec: glm.vec3):
-        uniform_loc = glGetUniformLocation(shader_id, name)
-        glUniform3f(uniform_loc, vec.x, vec.y, vec.z)
-
-
-    def setmat4(self, shader_id, name, mat: glm.mat4):
-        uniform_loc = glGetUniformLocation(shader_id, name)
-        glUniformMatrix4fv(uniform_loc, 1, GL_FALSE, glm.value_ptr(mat))
+def setmat4(shader_id, name, mat: glm.mat4):
+    uniform_loc = glGetUniformLocation(shader_id, name)
+    glUniformMatrix4fv(uniform_loc, 1, GL_FALSE, glm.value_ptr(mat))
 
 
 
@@ -367,7 +356,7 @@ def loadVerticesIndexed(vertices: np.ndarray, indices: np.ndarray, usage=GL_STAT
     glBufferData(GL_ARRAY_BUFFER, NP_VERTICES.nbytes, NP_VERTICES, usage)    
 
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, IBO)
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, NP_INDICES.nbytes, NP_INDICES, usage)    
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, NP_INDICES.nbytes, NP_INDICES, GL_STATIC_DRAW)    
 
     # Position attribute
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8*SIZEOF_FLOAT, ctypes.c_void_p(0*SIZEOF_FLOAT))
@@ -388,6 +377,13 @@ def loadVerticesIndexed(vertices: np.ndarray, indices: np.ndarray, usage=GL_STAT
         len(indices),
         0
     )
+
+
+def indexedSubData(VAO, VBO, vertices: np.ndarray):
+    glBindVertexArray(VAO)
+    glBindBuffer(GL_ARRAY_BUFFER, VBO)
+    glBufferSubData(GL_ARRAY_BUFFER, 0, vertices.nbytes, vertices)
+    glBindVertexArray(0)
 
 
 def drawVertices(mh: ModelHandle, gl_mode=GL_TRIANGLES) -> None:

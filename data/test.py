@@ -1,8 +1,8 @@
 
 
 
-fh = open("data/face_index_buffer copy.txt", "r")
-fh2 = open("indices.txt", "w")
+fh = open("data/indices.txt", "r")
+fh2 = open("indices2.txt", "w")
 
 
 i = 0

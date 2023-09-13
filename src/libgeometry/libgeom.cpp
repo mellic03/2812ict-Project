@@ -2,85 +2,22 @@
 #include <fstream>
 #include <stdint.h>
 #include <cmath>
+#include <vector>
 
 // #include <GL/glew.h>
 // #include <GL/gl.h>
-
-
-struct vec2
-{
-    union { float x, r; };
-    union { float y, g; };
-};
-
-
-struct vec3
-{
-    union { float x, r; };
-    union { float y, g; };
-    union { float z, b; };
-};
-
-
-vec3 operator + (const vec3 &u, const vec3 &v)
-{
-    return {u.x+v.x, u.y+v.y, u.z+v.z};
-}
-
-vec3 &operator += (vec3 &u, const vec3 &v)
-{
-    u.x += v.x;
-    u.y += v.y;
-    u.z += v.z;
-    return u;
-}
-
-
-vec3 operator - (const vec3 &u, const vec3 &v)
-{
-    return {u.x-v.x, u.y-v.y, u.z-v.z};
-}
-
-
-vec3 &operator /= (vec3 &v, float f)
-{
-    v.x /= f; v.y /= f; v.z /= f;
-    return v;
-}
-
-
-float dot(const vec3 &u, const vec3 &v)
-{
-    return u.x*v.x + u.y*v.y + u.z*v.z;
-}
-
-
-vec3 cross(const vec3 &u, const vec3 &v)
-{
-    return {
-         u.y*v.z - u.z*v.y,
-        -u.x*v.z + u.z*v.x,
-         u.x*v.y - u.y*v.x
-    };
-}
-
-
-vec3 normalize(vec3 v)
-{
-    float magSq = v.x*v.x + v.y*v.y + v.z*v.z;
-    float mag = sqrt(magSq);
-    v /= mag;
-    return v;
-}
+#include "fakeglm.hpp"
 
 
 struct vertex
 {
-    vec3 position;
-    vec3 normal;
-    vec2 uv;
+    glm::vec3 position;
+    glm::vec3 normal;
+    glm::vec2 uv;
 };
 
+
+std::vector<std::vector<glm::vec3>> adj_normals;
 
 
 extern "C" void
@@ -88,35 +25,57 @@ calculate_normals( void *vertices_ptr, void *indices_ptr, size_t indices_size )
 {
     vertex   *vertices = (vertex *)vertices_ptr;
     uint32_t *indices  = (uint32_t *)indices_ptr;
-
     size_t num_verts = indices_size;
+
+    // Reset adjacent normals
+    for (auto &v: adj_normals)
+    {
+        v.resize(0);
+    }
+
 
     for (size_t i=0; i<num_verts; i++)
     {
-        vertex *vert = &vertices[indices[i]];
-        vert->normal = { 0.0f, 0.0f, 0.0f };
+        int idx = indices[i];
+        vertices[idx].normal = { 0.0f, 0.0f, 0.0f };
     }
 
     for (size_t i=0; i<num_verts; i+=3)
     {
-        vertex *v0 = &vertices[indices[i+0]];
-        vertex *v1 = &vertices[indices[i+1]];
-        vertex *v2 = &vertices[indices[i+2]];
+        size_t idx0 = indices[i+0];
+        size_t idx1 = indices[i+1];
+        size_t idx2 = indices[i+2];
 
-        vec3 p0 = v0->position;
-        vec3 p1 = v1->position;
-        vec3 p2 = v2->position;
+        vertex *v0 = &vertices[idx0];
+        vertex *v1 = &vertices[idx1];
+        vertex *v2 = &vertices[idx2];
 
-        vec3 normal = cross(p1-p0, p2-p0);
-        v0->normal += normal;
-        v1->normal += normal;
-        v2->normal += normal;
+        glm::vec3 p0 = v0->position;
+        glm::vec3 p1 = v1->position;
+        glm::vec3 p2 = v2->position;
+
+        const glm::vec3 N = cross(p1-p0, p2-p0);
+
+        float theta0 = glm::angle(p1-p0, p2-p0);
+        float theta1 = glm::angle(p2-p1, p0-p1);
+        float theta2 = glm::angle(p0-p2, p1-p0);
+
+        v0->normal += theta0 * N;
+        v1->normal += theta1 * N;
+        v2->normal += theta2 * N;
     }
+
 
     for (size_t i=0; i<num_verts; i++)
     {
-        vertex *vert = &vertices[indices[i]];
-        vert->normal = normalize(vert->normal);
+        int idx = indices[i];
+
+        // glm::vec3 normal = { 0.0f, 0.0f, 0.0f };
+
+        // for (const auto &n: adj_normals[idx])
+        //     normal += n;
+
+        vertices[idx].normal = glm::normalize(vertices[idx].normal);
     }
 }
 
@@ -130,6 +89,11 @@ load_CFM(
 {
     float    *vertices = (float *)(verts_ptr);
     uint32_t *indices  = (uint32_t *)(indices_ptr);
+
+
+    // indices_size == number of vertices
+    adj_normals.resize(indices_size);
+
 
     // std::cout << "verts_size: " << verts_size << "\n";
     // std::cout << "indices_size: " << indices_size << "\n";
@@ -164,7 +128,6 @@ load_CFM(
     }
 
 
-
     stream = std::ifstream(indices_path);
 
     i = 0;
@@ -175,5 +138,21 @@ load_CFM(
 
         indices[i] = std::stoi(line);
         i += 1;
+    }
+}
+
+
+
+extern "C" void
+lerp_verts( void *verts0_ptr, void *verts1_ptr, size_t num_verts, float alpha )
+{
+    vertex *verts0 = (vertex *)(verts0_ptr);
+    vertex *verts1 = (vertex *)(verts1_ptr);
+
+    for (size_t i=0; i<num_verts; i++)
+    {
+        glm::vec3 &p0 = verts0[i].position;
+        glm::vec3 &p1 = verts1[i].position;
+        p0 = alpha*p0 + (1.0-alpha)*p1;
     }
 }
