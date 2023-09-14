@@ -37,7 +37,7 @@ def cv_thread_fn( ren: idk.Renderer, handDetector: HandDetector, faceDetector: F
 
 def gl_thread_fn( ren: idk.Renderer, handDetector: HandDetector, faceDetector: FaceDetector ):
 
-    client.init(b"127.0.0.1", 4201)
+    client.init(b"127.0.0.1", 4200)
 
     width = 1500
     height = 1200
