@@ -41,4 +41,4 @@ def entry(host, port):
 
     sock.close()
 
-entry("127.0.0.1", int(sys.argv[1]))
+entry(sys.argv[1].format("utf-8"), int(sys.argv[2])
