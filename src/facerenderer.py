@@ -111,7 +111,7 @@ class FaceRenderer:
 
 
         rotation = glm.rotate(self.theta, glm.vec3(0.0, 1.0, 0.0))
-        translation = glm.translate(glm.vec3(-2.0, -1.5, 0.0))
+        translation = glm.translate(cam.position())
         scale = glm.scale(glm.vec3(2.0))
         transform =  translation * scale * rotation
 
