@@ -13,12 +13,15 @@ def send_verts(verts: np.ndarray, conn: socket.socket):
     conn.sendall(b"ENDMSG")
 
 
-def entry(host, port):
+def entry():
 
-    print("connecting to %s:%d" % (host, port))
+    HOST = sys.argv[1].encode("ascii")
+    PORT = int(sys.argv[2])
 
+    print("connecting to %s:%d" % (HOST, PORT), end="... ")
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    sock.connect((host, port))
+    sock.connect((HOST, PORT))
+    print("connected")
 
     verts = np.zeros((468, 8), dtype=np.float32)
 
@@ -43,4 +46,4 @@ def entry(host, port):
 
     sock.close()
 
-entry(sys.argv[1].encode("ascii"), int(sys.argv[2]))
+entry()

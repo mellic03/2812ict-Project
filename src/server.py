@@ -30,7 +30,7 @@ def recv_verts(conn: socket.socket):
 
 def entry():
 
-    HOST = b"127.0.0.1"
+    HOST = b"0.0.0.0"
     PORT = int(sys.argv[1])
 
     NUM_USERS = 2
