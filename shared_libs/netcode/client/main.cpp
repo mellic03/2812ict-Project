@@ -2,7 +2,7 @@
 #include "ng_client.hpp"
 
 
-FaceVertices fshared(2);
+FaceVertices *fsharedptr;
 
 
 /*
@@ -19,6 +19,8 @@ FaceVertices fshared(2);
 extern "C" void
 child_main( char *hostname, uint16_t port )
 {
+    FaceVertices &fshared = *fsharedptr;
+
     // Wait for message and then perform the appropriate action
     uint8_t userid;
     NG_Client client = NG_Client_new();
@@ -34,18 +36,27 @@ child_main( char *hostname, uint16_t port )
         {
             userid = client.buffer.body[0];
             *fshared.m_shared_byte = userid;
+            printf("[USERID] %d\n", userid);
         }
 
-        if (msgtype == NG_MESSAGE_TEXT)
+        else if (msgtype == NG_MESSAGE_TEXT)
         {
             printf("[TEXT] %s\n", client.buffer.body);
         }
 
         else if (msgtype == NG_MESSAGE_VERTS_REQ)
         {
-            printf("[REQ_VERTS]\n");
+            printf("[VERTS_REQ]\n");
             memcpy(client.buffer.body, fshared[userid], NUM_VERTS*sizeof(vertex));
             NG_toServer(&client, &server, NG_MESSAGE_VERTS_RES);
+        }
+
+        else if (msgtype == NG_MESSAGE_VERTS_USER)
+        {
+            int id = client.buffer.body[0];
+            printf("this id: %d, them id: %d\n", userid, id);
+            NG_fromServer(&client, &server, NULL);
+            memcpy(fshared[id], client.buffer.body, NUM_VERTS*sizeof(vertex));
         }
 
         else if (msgtype == NG_MESSAGE_END)
@@ -63,6 +74,7 @@ child_main( char *hostname, uint16_t port )
 extern "C" void
 client_update_vertices( void *npverts )
 {
+    FaceVertices &fshared = *fsharedptr;
     memcpy(fshared[*fshared.m_shared_byte], npverts, NUM_VERTS*sizeof(vertex));    
 }
 
@@ -72,6 +84,7 @@ client_update_vertices( void *npverts )
 extern "C" void
 client_get_vertices( void *npverts, int id )
 {
+    FaceVertices &fshared = *fsharedptr;
     memcpy(npverts, fshared[id], NUM_VERTS*sizeof(vertex));    
 }
 
@@ -81,6 +94,7 @@ client_get_vertices( void *npverts, int id )
 extern "C" int
 client_get_userid()
 {
+    FaceVertices &fshared = *fsharedptr;
     return *fshared.m_shared_byte;
 }
 
@@ -90,6 +104,9 @@ client_get_userid()
 extern "C" void
 client_init( char *hostname, uint16_t port )
 {
+    fsharedptr = new FaceVertices(2);
+
+    FaceVertices &fshared = *fsharedptr;
     fshared[0][0].position = { 10.0f, 11.0f, 12.0f };
 
     if (fork() == 0)
@@ -99,6 +116,9 @@ client_init( char *hostname, uint16_t port )
 
 int main(int argc, char **argv)
 {
+    fsharedptr = new FaceVertices(2);
+
+    FaceVertices &fshared = *fsharedptr;
     fshared[0][0].position = { 10.0f, 11.0f, 12.0f };
 
     if (fork() == 0)

@@ -194,7 +194,7 @@ NG_toClient( NG_Server *server, NG_ClientRep *client, NG_MessageType msgtype )
         NG_Server_exit(server, 1);
     }
 
-    NG_Buffer_clear(&server->buffer);
+    // NG_Buffer_clear(&server->buffer);
 }
 
 

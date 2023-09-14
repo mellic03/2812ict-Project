@@ -95,10 +95,6 @@ class FaceRenderer:
 
 
     def draw(self, faceDetector, cam: idk.Camera, dtime) -> None:
-        results = faceDetector.m_results
-        if not results or not results.multi_face_landmarks:
-            return
-      
         glUseProgram(self.iris_shader)
         idk.setmat4(self.iris_shader, "un_view", cam.viewMatrix())
         idk.setmat4(self.iris_shader, "un_proj", cam.projection())
@@ -124,6 +120,9 @@ class FaceRenderer:
         idk.setvec3(current_shader, "un_specular", self.specular)
         idk.setfloat(current_shader, "un_spec_exponent", self.spec_exp)
 
+        results = faceDetector.m_results
+        if not results or not results.multi_face_landmarks:
+            return
 
         results = faceDetector.m_results
         if results and results.multi_face_landmarks:
@@ -132,11 +131,12 @@ class FaceRenderer:
 
 
     def draw_verts(self, vertices: np.ndarray) -> None:
+        glUseProgram(self.face_shader_tex)
         idk.indexedSubData(self.face_mh.VAO, self.face_mh.VBO, vertices)
-        if self.use_face_texture:
-            idk.drawVerticesIndexedTextured(self.face_mh, self.face_shader_tex)
-        else:
-            idk.drawVerticesIndexed(self.face_mh)
+        # if self.use_face_texture:
+        idk.drawVerticesIndexedTextured(self.face_mh, self.face_shader_tex)
+        # else:
+        # idk.drawVerticesIndexed(self.face_mh)
 
 
     def onEvent(self, state, dtime=1.0) -> None:

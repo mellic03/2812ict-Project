@@ -38,9 +38,8 @@ def cv_thread_fn( ren: idk.Renderer, handDetector: HandDetector, faceDetector: F
 
 def gl_thread_fn( ren: idk.Renderer, handDetector: HandDetector, faceDetector: FaceDetector ):
 
-    client.init(b"127.0.0.1", 4200)
+    client.init(b"127.0.0.1", 4201)
     userid = client.get_userid()
-    print("userid: ", userid)
 
     width = 1500
     height = 1200
@@ -64,7 +63,7 @@ def gl_thread_fn( ren: idk.Renderer, handDetector: HandDetector, faceDetector: F
     handRenderer = HandRenderer("config/hand.ini")
     faceRenderer = FaceRenderer("config/face.ini")
 
-    faceverts = [ np.ndarray((468, 8)) for i in range(0, 2) ]
+    faceverts = [ np.ndarray((468, 8), dtype=np.float32) for i in range(0, 2) ]
 
 
     dtime = SDL_GetTicks64()
@@ -93,7 +92,7 @@ def gl_thread_fn( ren: idk.Renderer, handDetector: HandDetector, faceDetector: F
 
         handRenderer.draw(handDetector, cam)
         faceRenderer.draw(faceDetector, cam, dtime)
-
+        client.update_vertices(faceRenderer.vertices)
         
         for i in range(0, 2):
             if i == userid:

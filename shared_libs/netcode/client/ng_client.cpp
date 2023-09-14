@@ -12,6 +12,18 @@ NG_Client_new()
     if (client.socketdesc < 0)
         perror("Could not create socket");
 
+
+    struct timeval timeout;
+    timeout.tv_sec = 30;
+
+    int res = setsockopt(
+        client.socketdesc,
+        SOL_SOCKET,
+        SO_RCVTIMEO,
+        &timeout,
+        sizeof(timeout)
+    );
+
     return client;
 }
 

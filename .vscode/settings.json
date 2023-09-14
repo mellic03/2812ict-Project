@@ -114,6 +114,8 @@
         "__verbose_abort": "cpp",
         "locale": "cpp",
         "*.ipp": "cpp",
-        "source_location": "cpp"
+        "source_location": "cpp",
+        "ranges": "cpp",
+        "span": "cpp"
     }
 }

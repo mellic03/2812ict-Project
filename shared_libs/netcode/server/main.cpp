@@ -4,13 +4,26 @@
 FaceVertices fshared(2);
 
 
-void process_verts( NG_Server *server, NG_ClientRep *client )
-{
-    // Load server->buffer into fshared[id]
-    int id = client->id;
-    memcpy(fshared[id], server->buffer.body, NUM_VERTS*sizeof(vertex));
-}
 
+
+void verts_for_all(NG_Server *server, NG_ClientRep *clients, int num_clients)
+{
+
+    for (int i=0; i<num_clients; i++)
+    {
+        for (int j=0; j<num_clients; j++)
+        {
+            if (j == i)
+                continue;
+            
+            sprintf(server->buffer.body, "%c\0", (unsigned char)i);
+            NG_toClient(server, &clients[j], NG_MESSAGE_VERTS_USER);
+
+            memcpy(server->buffer.body, fshared[i], NUM_VERTS*sizeof(vertex));
+            NG_toClient(server, &clients[j], NG_MESSAGE_VERTS_RES);
+        }
+    }
+}
 
 
 int main( int argc, char **argv )
@@ -36,8 +49,8 @@ int main( int argc, char **argv )
         clients[num_connected] = NG_Server_accept(&server, num_connected);
         printf("[C%d >> server] connected.\n", num_connected);
 
-        sprintf(server.buffer.body, "Hello, client %d.", num_connected);
-        NG_toClient(&server, &clients[num_connected], NG_MESSAGE_TEXT);
+        sprintf(server.buffer.body, "%c\0", (unsigned char)(num_connected));
+        NG_toClient(&server, &clients[num_connected], NG_MESSAGE_USERID);
 
         num_connected += 1;
     }
@@ -65,14 +78,13 @@ int main( int argc, char **argv )
 
         else if (msgtype == NG_MESSAGE_VERTS_RES)
         {
-            process_verts(&server, client);
+            int id = client->id;
+            memcpy(fshared[id], server.buffer.body, NUM_VERTS*sizeof(vertex));
+        }
 
-            printf(
-                "Received data: %f %f %f\n",
-                fshared[0][0].position.x,
-                fshared[0][0].position.y,
-                fshared[0][0].position.z
-            );
+        if (current == num_needed-1)
+        {
+            verts_for_all(&server, clients, num_needed);
         }
     }
 

@@ -8,6 +8,7 @@ NG_MessageType_str( NG_MessageType msgtype )
     switch (msgtype)
     {
         case NG_MESSAGE_TEXT:           return NG_MESSAGE_TEXT_STR;
+        case NG_MESSAGE_VERTS_USER:     return NG_MESSAGE_VERTS_USER_STR;
         case NG_MESSAGE_VERTS_REQ:      return NG_MESSAGE_VERTS_REQ_STR;
         case NG_MESSAGE_VERTS_RES:      return NG_MESSAGE_VERTS_RES_STR;
         case NG_MESSAGE_END:            return NG_MESSAGE_END_STR;
@@ -15,7 +16,7 @@ NG_MessageType_str( NG_MessageType msgtype )
         case NG_MESSAGE_MOVE:           return NG_MESSAGE_MOVE_STR;
         case NG_MESSAGE_QUIT:           return NG_MESSAGE_QUIT_STR;
 
-        default:                return "[INFRINGEMENT]";
+        default:                        return "[INFRINGEMENT]";
     }
 }
 
