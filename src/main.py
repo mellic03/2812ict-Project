@@ -9,42 +9,11 @@ import sdl2.ext
 import threading
 import cv2 as cv
 import numpy as np
+import client
 
 from detectors import *
 from handrenderer import HandRenderer
 from facerenderer import FaceRenderer
-
-from sclient import *
-
-
-
-NUM_USERS = 2
-
-
-def net_thread_fn( netverts: list[np.ndarray] ):
-    HOST = "127.0.0.1"
-    PORT = 4200
-
-    print("connecting to %s:%d" % (HOST, PORT), end="... ")
-    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    sock.connect((HOST, PORT))
-    print("connected")
-
-    while True:
-        if len(netverts) < NUM_USERS:
-            continue
-
-        message = sock.recv(128).decode("utf-8")
-        print("[server >> client]: ", message)
-
-        if message == "VERTS":
-            print("Sending face vertices...")
-            send_verts(netverts[0], sock)
-            continue
-
-        elif message == "END":
-            print("Terminating")
-            break
 
 
 def cv_thread_fn( ren: idk.Renderer, handDetector: HandDetector, faceDetector: FaceDetector ):
@@ -67,7 +36,10 @@ def cv_thread_fn( ren: idk.Renderer, handDetector: HandDetector, faceDetector: F
 
 
 
-def gl_thread_fn( ren: idk.Renderer, handDetector: HandDetector, faceDetector: FaceDetector, netverts: list[np.ndarray]):
+def gl_thread_fn( ren: idk.Renderer, handDetector: HandDetector, faceDetector: FaceDetector ):
+
+    client.init(b"127.0.0.1", 4200)
+    print("userid: ", client.get_userid())
 
     width = 1500
     height = 1200
@@ -135,19 +107,14 @@ def main():
     handDetector = HandDetector()
     faceDetector = FaceDetector()
 
-    netverts: list[np.ndarray] = [ ]
-
-    t1 = threading.Thread(target=gl_thread_fn,  args=(ren, handDetector, faceDetector, netverts, ))
+    t1 = threading.Thread(target=gl_thread_fn,  args=(ren, handDetector, faceDetector,))
     t2 = threading.Thread(target=cv_thread_fn,  args=(ren, handDetector, faceDetector,))
-    t3 = threading.Thread(target=net_thread_fn, args=(netverts,))
 
     t1.start()
     t2.start()
-    t3.start()
 
     t1.join()
     t2.join()
-    t3.join()
 
 
 

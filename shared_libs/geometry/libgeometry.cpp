@@ -9,13 +9,6 @@
 #include "fakeglm.hpp"
 
 
-struct vertex
-{
-    glm::vec3 position;
-    glm::vec3 normal;
-    glm::vec2 uv;
-};
-
 
 std::vector<std::vector<glm::vec3>> adj_normals;
 

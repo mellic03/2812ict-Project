@@ -31,3 +31,10 @@ glm::vec3 operator  *  ( const float &f,     const glm::vec3 &v );
 glm::vec3 &operator += ( glm::vec3 &u, const glm::vec3 &v       );
 glm::vec3 &operator /= ( glm::vec3 &v, float f                  );
 
+
+struct vertex
+{
+    glm::vec3 position;
+    glm::vec3 normal;
+    glm::vec2 uv;
+};

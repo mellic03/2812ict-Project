@@ -1,10 +1,9 @@
 #!/bin/bash
 
 g++ -fPIC -shared -o \
-src/libgeometry/libgeom.so \
-src/libgeometry/fakeglm.cpp \
-src/libgeometry/libgeom.cpp \
+shared_libs/geometry/libgeom.so \
+shared_libs/geometry/fakeglm.cpp \
+shared_libs/geometry/libgeometry.cpp \
 -Ofast
 
-
-# g++ -fPIC -shared -o src/process_verts.so src/process_verts.cpp -lGL -ldl
+mv shared_libs/geometry/libgeom.so src/libgeometry/libgeom.so
