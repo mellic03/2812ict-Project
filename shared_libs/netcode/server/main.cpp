@@ -30,7 +30,7 @@ int main( int argc, char **argv )
 {
     if (argc != 3)
     {
-        printf("usage: server <port number> <required players>\n");
+        // printf("usage: server <port number> <required players>\n");
         return 1;
     }
 
@@ -47,7 +47,7 @@ int main( int argc, char **argv )
     while (num_connected < num_needed)
     {
         clients[num_connected] = NG_Server_accept(&server, num_connected);
-        printf("[C%d >> server] connected.\n", num_connected);
+        // printf("[C%d >> server] connected.\n", num_connected);
 
         sprintf(server.buffer.body, "%c\0", (unsigned char)(num_connected));
         NG_toClient(&server, &clients[num_connected], NG_MESSAGE_USERID);

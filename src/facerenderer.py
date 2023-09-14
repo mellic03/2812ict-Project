@@ -74,7 +74,7 @@ class FaceRenderer:
         self.theta = 0.0
 
 
-    def __draw(self, facelms, dtime) -> None:
+    def __draw(self, facelms, cam, dtime) -> None:
         # self.theta += 0.005
         
         img_w = 640
@@ -85,12 +85,12 @@ class FaceRenderer:
         geom.lmarks_to_np(
             landmarks = facelms.landmark,
             nparray   = new_verts,
-            aspect    = img_w/img_h
+            aspect    = img_w/img_h,
+            posoffset = cam.position()
         )
 
         geom.lerp_verts(self.vertices, new_verts, self.lerp_alpha)
         geom.calculate_normals(self.vertices, self.indices)
-        self.draw_verts(self.vertices)
 
 
 
@@ -110,10 +110,12 @@ class FaceRenderer:
         idk.setmat4(current_shader, "un_proj",      cam.projection())
 
 
-        rotation = glm.rotate(self.theta, glm.vec3(0.0, 1.0, 0.0))
-        translation = glm.translate(cam.position())
-        scale = glm.scale(glm.vec3(2.0))
-        transform =  translation * scale * rotation
+        transform = glm.mat4(1.0)
+
+        # rotation = glm.rotate(self.theta, glm.vec3(0.0, 1.0, 0.0))
+        # translation = glm.translate(glm.vec3(-2.0, -1.5, 0.0))
+        # scale = glm.scale(glm.vec3(2.0))
+        # transform =  translation * scale * rotation
 
         idk.setmat4(current_shader, "un_model",    transform)
         idk.setvec3(current_shader, "un_color",    self.skin_color)
@@ -127,7 +129,7 @@ class FaceRenderer:
         results = faceDetector.m_results
         if results and results.multi_face_landmarks:
             for facelms in results.multi_face_landmarks:
-                self.__draw(facelms, dtime)
+                self.__draw(facelms, cam, dtime)
 
 
     def draw_verts(self, vertices: np.ndarray) -> None:

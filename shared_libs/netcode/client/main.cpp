@@ -41,12 +41,12 @@ child_main( char *hostname, uint16_t port )
 
         else if (msgtype == NG_MESSAGE_TEXT)
         {
-            printf("[TEXT] %s\n", client.buffer.body);
+            // printf("[TEXT] %s\n", client.buffer.body);
         }
 
         else if (msgtype == NG_MESSAGE_VERTS_REQ)
         {
-            printf("[VERTS_REQ]\n");
+            // printf("[VERTS_REQ]\n");
             memcpy(client.buffer.body, fshared[userid], NUM_VERTS*sizeof(vertex));
             NG_toServer(&client, &server, NG_MESSAGE_VERTS_RES);
         }
@@ -54,14 +54,14 @@ child_main( char *hostname, uint16_t port )
         else if (msgtype == NG_MESSAGE_VERTS_USER)
         {
             int id = client.buffer.body[0];
-            printf("this id: %d, them id: %d\n", userid, id);
+            // printf("this id: %d, them id: %d\n", userid, id);
             NG_fromServer(&client, &server, NULL);
             memcpy(fshared[id], client.buffer.body, NUM_VERTS*sizeof(vertex));
         }
 
         else if (msgtype == NG_MESSAGE_END)
         {
-            printf("[END]\n");
+            // printf("[END]\n");
             NG_Client_exit(&client, 0);
         }
     }

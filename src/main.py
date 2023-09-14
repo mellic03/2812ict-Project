@@ -17,8 +17,7 @@ from facerenderer import FaceRenderer
 
 
 def cv_thread_fn( ren: idk.Renderer, handDetector: HandDetector, faceDetector: FaceDetector ):
-
-    cap = cv.VideoCapture(0,)
+    cap = cv.VideoCapture(0)
     cap.set(cv.CAP_PROP_FRAME_WIDTH,  640)
     cap.set(cv.CAP_PROP_FRAME_HEIGHT, 480)
 
@@ -39,7 +38,6 @@ def cv_thread_fn( ren: idk.Renderer, handDetector: HandDetector, faceDetector: F
 def gl_thread_fn( ren: idk.Renderer, handDetector: HandDetector, faceDetector: FaceDetector ):
 
     client.init(b"127.0.0.1", 4201)
-    userid = client.get_userid()
 
     width = 1500
     height = 1200
@@ -95,12 +93,8 @@ def gl_thread_fn( ren: idk.Renderer, handDetector: HandDetector, faceDetector: F
         client.update_vertices(faceRenderer.vertices)
         
         for i in range(0, 2):
-            if i == userid:
-                continue
-
             client.get_vertices(faceverts[i], i)
             faceRenderer.draw_verts(faceverts[i])
-
 
 
         state = sdl2.SDL_GetKeyboardState(None)
@@ -121,11 +115,15 @@ def main():
     t1 = threading.Thread(target=gl_thread_fn,  args=(ren, handDetector, faceDetector,))
     t2 = threading.Thread(target=cv_thread_fn,  args=(ren, handDetector, faceDetector,))
 
+    t1.setDaemon(True)
+    t2.setDaemon(True)
+
     t1.start()
     t2.start()
 
     t1.join()
     t2.join()
+
 
 
 
