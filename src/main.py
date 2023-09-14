@@ -39,7 +39,8 @@ def cv_thread_fn( ren: idk.Renderer, handDetector: HandDetector, faceDetector: F
 def gl_thread_fn( ren: idk.Renderer, handDetector: HandDetector, faceDetector: FaceDetector ):
 
     client.init(b"127.0.0.1", 4200)
-    print("userid: ", client.get_userid())
+    userid = client.get_userid()
+    print("userid: ", userid)
 
     width = 1500
     height = 1200
@@ -51,7 +52,6 @@ def gl_thread_fn( ren: idk.Renderer, handDetector: HandDetector, faceDetector: F
     cam.translate(glm.vec3(-1.0, -1.0, -1.0))
     cam.yaw(glm.radians(180))
 
-    room = idk.Model()
 
     sky = idk.Model()
     sky_mh = sky.loadOBJ(b"models/skybox.obj", b"textures/skybox.png")
@@ -63,6 +63,8 @@ def gl_thread_fn( ren: idk.Renderer, handDetector: HandDetector, faceDetector: F
 
     handRenderer = HandRenderer("config/hand.ini")
     faceRenderer = FaceRenderer("config/face.ini")
+
+    faceverts = [ np.ndarray((468, 8)) for i in range(0, 2) ]
 
 
     dtime = SDL_GetTicks64()
@@ -91,6 +93,16 @@ def gl_thread_fn( ren: idk.Renderer, handDetector: HandDetector, faceDetector: F
 
         handRenderer.draw(handDetector, cam)
         faceRenderer.draw(faceDetector, cam, dtime)
+
+        
+        for i in range(0, 2):
+            if i == userid:
+                continue
+
+            client.get_vertices(faceverts[i], i)
+            faceRenderer.draw_verts(faceverts[i])
+
+
 
         state = sdl2.SDL_GetKeyboardState(None)
         cam.onEvent(state, dtime)

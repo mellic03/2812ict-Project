@@ -131,7 +131,7 @@ class FaceRenderer:
                 self.__draw(facelms, dtime)
 
 
-    def draw_verts(self, vertices) -> None:
+    def draw_verts(self, vertices: np.ndarray) -> None:
         idk.indexedSubData(self.face_mh.VAO, self.face_mh.VBO, vertices)
         if self.use_face_texture:
             idk.drawVerticesIndexedTextured(self.face_mh, self.face_shader_tex)
