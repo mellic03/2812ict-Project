@@ -15,6 +15,8 @@ def send_verts(verts: np.ndarray, conn: socket.socket):
 
 def entry(host, port):
 
+    print("connecting to %s:%d" % (host, port))
+
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     sock.connect((host, port))
 
@@ -41,4 +43,4 @@ def entry(host, port):
 
     sock.close()
 
-entry(sys.argv[1].format("utf-8"), int(sys.argv[2])
+entry(sys.argv[1].encode("ascii"), int(sys.argv[2]))
