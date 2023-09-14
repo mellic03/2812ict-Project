@@ -20,9 +20,6 @@ from face_vertices import *
 
 class FaceRenderer:
 
-    __dtime_accum = 0
-
-
     def __reload_ini(self) -> None:
         config = configparser.ConfigParser()
         config.read(self.config_path)
@@ -93,13 +90,7 @@ class FaceRenderer:
 
         geom.lerp_verts(self.vertices, new_verts, self.lerp_alpha)
         geom.calculate_normals(self.vertices, self.indices)
-
-        idk.indexedSubData(self.face_mh.VAO, self.face_mh.VBO, self.vertices)
-
-        if self.use_face_texture:
-            idk.drawVerticesIndexedTextured(self.face_mh, self.face_shader_tex)
-        else:
-            idk.drawVerticesIndexed(self.face_mh)
+        self.draw_verts(self.vertices)
 
 
 
@@ -139,6 +130,13 @@ class FaceRenderer:
             for facelms in results.multi_face_landmarks:
                 self.__draw(facelms, dtime)
 
+
+    def draw_verts(self, vertices) -> None:
+        idk.indexedSubData(self.face_mh.VAO, self.face_mh.VBO, vertices)
+        if self.use_face_texture:
+            idk.drawVerticesIndexedTextured(self.face_mh, self.face_shader_tex)
+        else:
+            idk.drawVerticesIndexed(self.face_mh)
 
 
     def onEvent(self, state, dtime=1.0) -> None:

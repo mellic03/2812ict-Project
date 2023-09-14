@@ -1,8 +1,3 @@
-# OpenGL -------------------------------------------
-# This program requires a python wrapper for OpenGL
-# along with SDL2, numpy and ctypes.
-# pip install ctypes numpy pysdl2 PyOpenGL PyOpenGL_accelerate
-# --------------------------------------------------
 import idk
 from OpenGL.GL import *
 import glm as glm
@@ -13,11 +8,43 @@ import sdl2.ext
 
 import threading
 import cv2 as cv
+import numpy as np
 
 from detectors import *
 from handrenderer import HandRenderer
 from facerenderer import FaceRenderer
 
+from sclient import *
+
+
+
+NUM_USERS = 2
+
+
+def net_thread_fn( netverts: list[np.ndarray] ):
+    HOST = "127.0.0.1"
+    PORT = 4200
+
+    print("connecting to %s:%d" % (HOST, PORT), end="... ")
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.connect((HOST, PORT))
+    print("connected")
+
+    while True:
+        if len(netverts) < NUM_USERS:
+            continue
+
+        message = sock.recv(128).decode("utf-8")
+        print("[server >> client]: ", message)
+
+        if message == "VERTS":
+            print("Sending face vertices...")
+            send_verts(netverts[0], sock)
+            continue
+
+        elif message == "END":
+            print("Terminating")
+            break
 
 
 def cv_thread_fn( ren: idk.Renderer, handDetector: HandDetector, faceDetector: FaceDetector ):
@@ -40,7 +67,7 @@ def cv_thread_fn( ren: idk.Renderer, handDetector: HandDetector, faceDetector: F
 
 
 
-def gl_thread_fn( ren: idk.Renderer, handDetector: HandDetector, faceDetector: FaceDetector ):
+def gl_thread_fn( ren: idk.Renderer, handDetector: HandDetector, faceDetector: FaceDetector, netverts: list[np.ndarray]):
 
     width = 1500
     height = 1200
@@ -53,15 +80,13 @@ def gl_thread_fn( ren: idk.Renderer, handDetector: HandDetector, faceDetector: F
     cam.yaw(glm.radians(180))
 
     room = idk.Model()
-    room_h = room.loadOBJ(b"models/plane.obj", b"textures/palette.png")
-    tex_shader = idk.compileShaderProgram("src/shaders/", "textured.vs", "textured.fs")
 
     sky = idk.Model()
     sky_mh = sky.loadOBJ(b"models/skybox.obj", b"textures/skybox.png")
     sky_shader = idk.compileShaderProgram("src/shaders/", "general.vs", "skybox.fs")
 
     grass = idk.Model()
-    grass_mh = sky.loadOBJ(b"models/grass.obj", b"textures/grass.png")
+    grass_mh = grass.loadOBJ(b"models/grass.obj", b"textures/grass.png")
     grass_shader = idk.compileShaderProgram("src/shaders/", "general.vs", "textured.fs")
 
     handRenderer = HandRenderer("config/hand.ini")
@@ -110,14 +135,19 @@ def main():
     handDetector = HandDetector()
     faceDetector = FaceDetector()
 
-    t1 = threading.Thread(target=gl_thread_fn,  args=(ren, handDetector, faceDetector,))
+    netverts: list[np.ndarray] = [ ]
+
+    t1 = threading.Thread(target=gl_thread_fn,  args=(ren, handDetector, faceDetector, netverts, ))
     t2 = threading.Thread(target=cv_thread_fn,  args=(ren, handDetector, faceDetector,))
+    t3 = threading.Thread(target=net_thread_fn, args=(netverts,))
 
     t1.start()
     t2.start()
+    t3.start()
 
     t1.join()
     t2.join()
+    t3.join()
 
 
 

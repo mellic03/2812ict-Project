@@ -72,7 +72,6 @@ def entry():
             continue
 
         # clients[current].sendall(b"END")
-        num_connected -= 1
 
 
     sock.shutdown(socket.SHUT_RDWR)

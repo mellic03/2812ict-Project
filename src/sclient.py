@@ -13,22 +13,17 @@ def send_verts(verts: np.ndarray, conn: socket.socket):
     conn.sendall(b"ENDMSG")
 
 
-def entry():
+def client_entry(clientverts: np.ndarray, host, port):
 
-    HOST = sys.argv[1].encode("ascii")
-    PORT = int(sys.argv[2])
+    HOST = host
+    PORT = port
 
     print("connecting to %s:%d" % (HOST, PORT), end="... ")
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     sock.connect((HOST, PORT))
     print("connected")
 
-    verts = np.zeros((468, 8), dtype=np.float32)
-
-    verts[0][0:3] = [0, 1, 2]
-    verts[1][0:3] = [3, 4, 5]
-    verts[2][0:3] = [6, 7, 8]
-
+    # verts = np.zeros((468, 8), dtype=np.float32)
 
     while True:
         # Idle until command received
@@ -37,7 +32,7 @@ def entry():
 
         if message == "VERTS":
             print("Sending face vertices...")
-            send_verts(verts, sock)
+            send_verts(clientverts, sock)
             continue
 
         elif message == "END":
@@ -45,5 +40,3 @@ def entry():
             break
 
     sock.close()
-
-entry()

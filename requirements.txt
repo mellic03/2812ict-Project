@@ -18,7 +18,6 @@ opencv-python==4.8.0.76
 packaging==23.1
 Pillow==10.0.0
 protobuf==3.20.3
-pybullet==3.2.5
 pycparser==2.21
 PyGLM==2.7.0
 PyOpenGL==3.1.7
