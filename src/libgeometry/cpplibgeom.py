@@ -52,6 +52,8 @@ def load_CFM( vertices_path: str, indices_path: str ):
     # vertices because indexed rendering is used.
     NUM_FLOATS  = (2340 // 5) * 8
     NUM_INDICES = 2640
+    # NUM_FLOATS  = (2500 // 5) * 8
+    # NUM_INDICES = 2700
 
     vertices = np.ndarray((NUM_FLOATS,),  dtype=np.float32)
     indices  = np.ndarray((NUM_INDICES,), dtype=np.uint32)

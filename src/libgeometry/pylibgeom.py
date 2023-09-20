@@ -62,8 +62,6 @@ def calculate_normals(vertices: np.ndarray, indices: np.ndarray):
     # for i in range(0, len(adj_normals)):
     #     adj_normals[i] = np.ndarray((NUM_INDICES, 3))
 
-    print("here!")
-
     # Calculate normals
     for i in range(0, indices.shape[0], 3):
         idx0 = indices[i+0]
@@ -88,11 +86,6 @@ def calculate_normals(vertices: np.ndarray, indices: np.ndarray):
         N0 = theta0 * N
         N1 = theta1 * N
         N2 = theta2 * N
-
-
-        # adj_normals[idx0][reee] = ([ N0[0], N0[1], N0[2] ])
-        # adj_normals[idx1][reee] = ([ N1[0], N1[1], N1[2] ])
-        # adj_normals[idx2][reee] = ([ N2[0], N2[1], N2[2] ])
 
 
     for i in range(0, indices.size):

@@ -16,16 +16,15 @@ std::vector<std::vector<glm::vec3>> adj_normals;
 extern "C" void
 calculate_normals( void *vertices_ptr, void *indices_ptr, size_t indices_size )
 {
-    vertex   *vertices = (vertex *)vertices_ptr;
-    uint32_t *indices  = (uint32_t *)indices_ptr;
-    size_t num_verts = indices_size;
+    vertex *vertices  = (vertex *)vertices_ptr;
+    uint32_t *indices = (uint32_t *)indices_ptr;
+    size_t num_verts  = indices_size;
 
     // Reset adjacent normals
     for (auto &v: adj_normals)
     {
         v.resize(0);
     }
-
 
     for (size_t i=0; i<num_verts; i++)
     {

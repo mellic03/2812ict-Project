@@ -15,11 +15,6 @@ SIZEOF_VERTEX = VERTEX_NUM_ELEMENTS*SIZEOF_FLOAT
 
 
 class ModelHandle:
-    VAO: GLuint
-    VBO: GLuint
-    num_elements: GLuint
-    glTextureID:  GLuint  # For simplicity, each model has one texture
-
     def __init__(self, VAO, VBO, num_elements, glTextureID) -> None:
         self.VAO = VAO
         self.VBO = VBO
@@ -334,7 +329,6 @@ def loadVertices(vertices: list[float], usage=GL_STATIC_DRAW):
     glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8*SIZEOF_FLOAT, ctypes.c_void_p(6*SIZEOF_FLOAT))
     glEnableVertexAttribArray(2)
 
-    glBindBuffer(GL_ARRAY_BUFFER, 0)
     glBindVertexArray(0)
 
     return ModelHandle(
@@ -342,6 +336,7 @@ def loadVertices(vertices: list[float], usage=GL_STATIC_DRAW):
         len(vertices) // VERTEX_NUM_ELEMENTS,
         0
     )
+
 
 
 def setint(shader_id, name, value):
@@ -386,7 +381,14 @@ def loadVerticesIndexed(vertices: np.ndarray, indices: np.ndarray, usage=GL_STAT
     )
 
 
-def indexedSubData(VAO, VBO, vertices: np.ndarray):
+def subData( mh, vertices: np.ndarray ):
+    glBindVertexArray(mh.VAO)
+    glBindBuffer(GL_ARRAY_BUFFER, mh.VBO)
+    glBufferSubData(GL_ARRAY_BUFFER, 0, vertices.nbytes, vertices)
+    glBindVertexArray(0)
+
+
+def indexedSubData( VAO, VBO, vertices: np.ndarray ):
     glBindVertexArray(VAO)
     glBindBuffer(GL_ARRAY_BUFFER, VBO)
     glBufferSubData(GL_ARRAY_BUFFER, 0, vertices.nbytes, vertices)
