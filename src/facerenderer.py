@@ -71,11 +71,11 @@ class FaceRenderer:
         self.__reload_shaders()
         self.__reload_ini()
 
+        self.ready = False
         self.theta = 0.0
 
 
     def __draw(self, facelms, cam, dtime) -> None:
-        # self.theta += 0.005
         
         img_w = 640
         img_h = 480
@@ -85,13 +85,11 @@ class FaceRenderer:
         geom.lmarks_to_np(
             landmarks = facelms.landmark,
             nparray   = new_verts,
-            aspect    = img_w/img_h,
-            posoffset = cam.position()
+            aspect    = img_w/img_h
         )
 
         geom.lerp_verts(self.vertices, new_verts, self.lerp_alpha)
         geom.calculate_normals(self.vertices, self.indices)
-
 
 
     def draw(self, faceDetector, cam: idk.Camera, dtime) -> None:
@@ -110,14 +108,12 @@ class FaceRenderer:
         idk.setmat4(current_shader, "un_proj",      cam.projection())
 
 
-        transform = glm.mat4(1.0)
+        rotation = glm.rotate(self.theta, glm.vec3(0.0, 1.0, 0.0))
+        translation = glm.translate(glm.vec3(-2.0, -1.5, 0.0))
+        scale = glm.scale(glm.vec3(2.0))
+        transform =  translation * scale * rotation
 
-        # rotation = glm.rotate(self.theta, glm.vec3(0.0, 1.0, 0.0))
-        # translation = glm.translate(glm.vec3(-2.0, -1.5, 0.0))
-        # scale = glm.scale(glm.vec3(2.0))
-        # transform =  translation * scale * rotation
-
-        idk.setmat4(current_shader, "un_model",    transform)
+        idk.setmat4(current_shader, "un_model",    transform * glm.scale(glm.vec3(-1, 1, 1)))
         idk.setvec3(current_shader, "un_color",    self.skin_color)
         idk.setvec3(current_shader, "un_specular", self.specular)
         idk.setfloat(current_shader, "un_spec_exponent", self.spec_exp)
@@ -126,22 +122,23 @@ class FaceRenderer:
         if not results or not results.multi_face_landmarks:
             return
 
-        results = faceDetector.m_results
-        if results and results.multi_face_landmarks:
-            for facelms in results.multi_face_landmarks:
-                self.__draw(facelms, cam, dtime)
+        self.ready = True
+        for facelms in results.multi_face_landmarks:
+            self.__draw(facelms, cam, dtime)
 
 
-    def draw_verts(self, vertices: np.ndarray) -> None:
-        glUseProgram(self.face_shader_tex)
-        idk.indexedSubData(self.face_mh.VAO, self.face_mh.VBO, vertices)
-        # if self.use_face_texture:
-        idk.drawVerticesIndexedTextured(self.face_mh, self.face_shader_tex)
-        # else:
-        # idk.drawVerticesIndexed(self.face_mh)
+        glUseProgram(current_shader)
+        idk.indexedSubData(self.face_mh.VAO, self.face_mh.VBO, self.vertices)
+
+        if self.use_face_texture:
+            idk.drawVerticesIndexedTextured(self.face_mh, self.face_shader_tex)
+        else:
+            idk.drawVerticesIndexed(self.face_mh)
+
 
 
     def onEvent(self, state, dtime=1.0) -> None:
         if state[SDL_SCANCODE_F5]:
             self.__reload_ini()
             self.__reload_shaders()
+

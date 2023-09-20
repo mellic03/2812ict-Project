@@ -35,15 +35,15 @@ def load_CFM( vertices_path: str, indices_path: str ):
     return vertices, indices
 
 
-def lmarks_to_np( landmarks, nparray: np.ndarray, aspect=1, posoffset=glm.vec3(0.0) ):
+def lmarks_to_np( landmarks, nparray: np.ndarray, aspect ):
 
     for i in range(0, len(landmarks)):
         if i >= nparray.shape[0]:
             break
         v = landmarks[i]
-        nparray[i][0] = aspect * (v.x-0.5) + posoffset.x
-        nparray[i][1] = v.y-0.5 + posoffset.y
-        nparray[i][2] = v.z + posoffset.z
+        nparray[i][0] = (v.x-0.5) * aspect
+        nparray[i][1] = (v.y-0.5)
+        nparray[i][2] = v.z
 
 
 def lerp_verts( verts0: np.ndarray, verts1: np.ndarray, alpha ):

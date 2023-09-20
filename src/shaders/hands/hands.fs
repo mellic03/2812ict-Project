@@ -33,6 +33,6 @@ void main()
     vec3 specular = un_color * specular_f * 1;
     vec3 result   = ambient + diffuse + specular;
 
-    fsout_color = vec4(fsin_normal, 1.0);
+    fsout_color = vec4(result, 1.0);
 }
 

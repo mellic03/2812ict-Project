@@ -10,7 +10,6 @@ import glm as glm
 
 class Transform:
     def __init__(self) -> None:
-        self.__front = glm.vec3(0.0, 0.0, -1.0)
         self.__model_mat = glm.mat4(1.0)
 
     def translate(self, v: glm.vec3) -> None:
@@ -30,14 +29,14 @@ class Camera:
         self.__near   = near
         self.__far    = far
 
-        self.__default_front = glm.vec3( 0.0,  0.0, -1.0 )
-        self.__default_right = glm.vec3( 1.0,  0.0,  0.0 )
-        self.__default_up    = glm.vec3( 0.0,  1.0,  0.0 )
+        self.__default_front = glm.vec3(0.0, 0.0, 1.0)
+        self.__default_right = glm.vec3(1.0, 0.0, 0.0)
+        self.__default_up    = glm.vec3(0.0, 1.0, 0.0)
 
         self.__pos   = glm.vec3(0.0)
-        self.__front = glm.vec3(0.0, 0.0, -1.0)
-        self.__right = glm.vec3( 1.0,  0.0,  0.0 )
-        self.__up    = glm.vec3( 0.0,  1.0,  0.0 )
+        self.__front = glm.vec3(0.0, 0.0, 1.0)
+        self.__right = glm.vec3(1.0, 0.0, 0.0)
+        self.__up    = glm.vec3(0.0, 1.0, 0.0)
 
         self.__view = glm.lookAt(
             self.__pos,
@@ -53,10 +52,14 @@ class Camera:
         )
 
         self.__transform = Transform()
+        self.__anchor = glm.vec3(0.0)
 
 
-    def translate(self, v: glm.vec3) -> None:
+    def translate(self, v: glm.vec3, scale=glm.vec3(1.0)) -> None:
         _v = glm.inverse(glm.mat3(self.__view)) * v
+        _v.x *= scale.x
+        _v.y *= scale.y
+        _v.z *= scale.z
         self.__transform.translate(_v)
 
 
@@ -73,7 +76,7 @@ class Camera:
 
 
     def viewMatrix(self) -> glm.mat4:
-        return self.__view * glm.inverse(self.__transform.modelMatrix())
+        return self.__view * self.__transform.modelMatrix() * glm.inverse(glm.translate(self.__anchor))
 
 
     def setProjection(self, fov, width, height) -> None:
@@ -83,6 +86,9 @@ class Camera:
             self.__near,
             self.__far
         )
+
+    def anchor(self, pos: glm.vec3) -> None:
+        self.__anchor = pos
 
     def projection(self) -> glm.mat4:
         return self.__projection
@@ -103,13 +109,13 @@ class Camera:
         TURN  = 3.0 * dtime
 
         if state[SDL_SCANCODE_D]:
-            self.translate(SPEED * glm.vec3(-1.0, 0.0,  0.0))
-        if state[SDL_SCANCODE_A]:
             self.translate(SPEED * glm.vec3( 1.0, 0.0,  0.0))
+        if state[SDL_SCANCODE_A]:
+            self.translate(SPEED * glm.vec3(-1.0, 0.0,  0.0))
         if state[SDL_SCANCODE_W]:
-            self.translate(SPEED * glm.vec3(0.0,  0.0, -1.0))
+            self.translate(SPEED * glm.vec3(0.0,  0.0,  1.0), glm.vec3(1, 0, 1))
         if state[SDL_SCANCODE_S]:
-            self.translate(SPEED * glm.vec3(0.0,  0.0,  1.0))
+            self.translate(SPEED * glm.vec3(0.0,  0.0, -1.0), glm.vec3(1, 0, 1))
 
 
         if state[SDL_SCANCODE_Q]:
@@ -121,3 +127,9 @@ class Camera:
             self.pitch( TURN)
         if state[SDL_SCANCODE_F]:
             self.pitch(-TURN)
+
+        if state[SDL_SCANCODE_SPACE]:
+            self.translate(SPEED * glm.vec3(0.0,  1.0,  0.0))
+        if state[SDL_SCANCODE_LCTRL]:
+            self.translate(SPEED * glm.vec3(0.0, -1.0,  0.0))
+

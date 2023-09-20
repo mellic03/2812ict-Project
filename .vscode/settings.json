@@ -116,6 +116,12 @@
         "*.ipp": "cpp",
         "source_location": "cpp",
         "ranges": "cpp",
-        "span": "cpp"
+        "span": "cpp",
+        "cerrno": "cpp",
+        "stddef.h": "c",
+        "simplesocket.h": "c",
+        "string.h": "c",
+        "inet.h": "c",
+        "socket.h": "c"
     }
 }

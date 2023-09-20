@@ -14,6 +14,7 @@ import client
 from detectors import *
 from handrenderer import HandRenderer
 from facerenderer import FaceRenderer
+from facecontroller import FaceController
 
 
 def cv_thread_fn( ren: idk.Renderer, handDetector: HandDetector, faceDetector: FaceDetector ):
@@ -37,16 +38,14 @@ def cv_thread_fn( ren: idk.Renderer, handDetector: HandDetector, faceDetector: F
 
 def gl_thread_fn( ren: idk.Renderer, handDetector: HandDetector, faceDetector: FaceDetector ):
 
-    client.init(b"127.0.0.1", 4200)
-
     width = 1500
     height = 1200
     ren.ren_init()
     glDisable(GL_CULL_FACE)
     SDL_GL_SetSwapInterval(0)
 
-    cam = idk.Camera(80.0, width/height, 0.1, 10000.0)
-    cam.translate(glm.vec3(-1.0, -1.0, -1.0))
+    cam = idk.Camera(80.0, width/height, 0.1, 1000.0)
+    # cam.translate(glm.vec3(-1.0, -1.0, -1.0))
     cam.yaw(glm.radians(180))
 
 
@@ -59,49 +58,56 @@ def gl_thread_fn( ren: idk.Renderer, handDetector: HandDetector, faceDetector: F
     grass_shader = idk.compileShaderProgram("src/shaders/", "general.vs", "textured.fs")
 
     handRenderer = HandRenderer("config/hand.ini")
-    faceRenderer = FaceRenderer("config/face.ini")
+    faceRenderer = FaceRenderer("config/fRenderer.ini")
+    faceController = FaceController("config/fController.ini")
 
     faceverts = [ np.ndarray((468, 8), dtype=np.float32) for i in range(0, 2) ]
 
 
     dtime = SDL_GetTicks64()
+    start = SDL_GetTicks64()
 
     while (ren.running()):
 
-        start = SDL_GetTicks64()
+        if dtime > 1/60:
+            start = SDL_GetTicks64()
 
-        ren.beginFrame(cam)
+            ren.beginFrame(cam)
 
-        glUseProgram(sky_shader)
-        idk.setmat4(sky_shader, "un_proj", cam.projection())
-        idk.setmat4(sky_shader, "un_view", cam.viewMatrix())
-        idk.setmat4(sky_shader, "un_model", glm.mat4(1.0))
-        idk.drawVerticesTextured(sky_shader, sky_mh)
+            # Render background
+            # ---------------------------------------------------------
+            glUseProgram(sky_shader)
+            idk.setmat4(sky_shader, "un_proj", cam.projection())
+            idk.setmat4(sky_shader, "un_view", cam.viewMatrix())
+            idk.setmat4(sky_shader, "un_model", glm.mat4(1.0))
+            idk.drawVerticesTextured(sky_shader, sky_mh)
+            # ---------------------------------------------------------
 
-        glUseProgram(grass_shader)
-        idk.setmat4(grass_shader, "un_proj", cam.projection())
-        idk.setmat4(grass_shader, "un_view", cam.viewMatrix())
-        idk.setmat4(grass_shader, "un_model", glm.mat4(1.0))
-        idk.setvec3(grass_shader, "un_view_pos", cam.position())
-        idk.setfloat(grass_shader, "un_spec_exponent", 4)
-        idk.setfloat(grass_shader, "un_spec_strength", 0.1)
-        idk.drawVerticesTextured(grass_shader, grass_mh)
-
-
-        handRenderer.draw(handDetector, cam)
-        faceRenderer.draw(faceDetector, cam, dtime)
-        client.update_vertices(faceRenderer.vertices)
-        
-        for i in range(0, 2):
-            client.get_vertices(faceverts[i], i)
-            faceRenderer.draw_verts(faceverts[i])
+            # Render terrain
+            # ---------------------------------------------------------
+            glUseProgram(grass_shader)
+            idk.setmat4(grass_shader, "un_proj", cam.projection())
+            idk.setmat4(grass_shader, "un_view", cam.viewMatrix())
+            idk.setmat4(grass_shader, "un_model", glm.mat4(1.0))
+            idk.setvec3(grass_shader, "un_view_pos", cam.position())
+            idk.setfloat(grass_shader, "un_spec_exponent", 4)
+            idk.setfloat(grass_shader, "un_spec_strength", 0.1)
+            idk.drawVerticesTextured(grass_shader, grass_mh)
+            # ---------------------------------------------------------
 
 
-        state = sdl2.SDL_GetKeyboardState(None)
-        cam.onEvent(state, dtime)
-        faceRenderer.onEvent(state)
+            handRenderer.draw(handDetector, cam)
+            faceRenderer.draw(faceDetector, cam, dtime)
+            faceController.update(faceRenderer, cam)
 
-        ren.endFrame()
+
+            state = sdl2.SDL_GetKeyboardState(None)
+            cam.onEvent(state, dtime)
+            faceRenderer.onEvent(state, dtime)
+            faceController.onEvent(state, dtime)
+
+            ren.endFrame()
+
 
         dtime = (SDL_GetTicks64() - start) / 1000.0
 
@@ -114,9 +120,7 @@ def main():
 
     t1 = threading.Thread(target=gl_thread_fn,  args=(ren, handDetector, faceDetector,))
     t2 = threading.Thread(target=cv_thread_fn,  args=(ren, handDetector, faceDetector,))
-
-    t1.setDaemon(True)
-    t2.setDaemon(True)
+    t2.daemon = True
 
     t1.start()
     t2.start()

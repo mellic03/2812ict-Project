@@ -7,11 +7,11 @@ import mediapipe as mp
 class FaceDetector:
     def __init__(self) -> None:
 
-        self.face_mesh = mp.solutions.face_mesh
-        self.mpFace  = mp.solutions.face_mesh.FaceMesh(refine_landmarks=True, max_num_faces=1)
-        self.mpDraw  = mp.solutions.drawing_utils
+        self.face_mesh   = mp.solutions.face_mesh
+        self.mpFace      = mp.solutions.face_mesh.FaceMesh(refine_landmarks=True, max_num_faces=1)
+        self.mpDraw      = mp.solutions.drawing_utils
         self.drawStyles  = mp.solutions.drawing_styles
-        self.m_results = None
+        self.m_results   = None
 
 
     def detect(self, img) -> None:
@@ -54,8 +54,8 @@ class HandDetector:
         self.mpHands  = mp.solutions.hands.Hands(
             static_image_mode=False,
             max_num_hands=2,
-            min_detection_confidence=0.9,
-            min_tracking_confidence=0.9
+            min_detection_confidence=0.8,
+            min_tracking_confidence=0.5
         )
         self.mpDraw  = mp.solutions.drawing_utils
         self.drawStyles  = mp.solutions.drawing_styles
