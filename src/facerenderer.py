@@ -17,6 +17,8 @@ import libgeometry as geom
 
 from face_vertices import *
 
+import definitions as defs
+
 
 def collect_avg( vertices ) -> glm.vec3:
     avg = glm.vec3(0.0)
@@ -104,13 +106,12 @@ class FaceRenderer:
 
 
     def __preprocess_vertices(self, facelms) -> None:
-        img_w = 640
-        img_h = 480
+        aspect = defs.IMG_W / defs.IMG_H
 
         geom.lmarks_to_np(
             landmarks = facelms.landmark,
             nparray   = self.vbackbuffer,
-            aspect    = img_w/img_h
+            aspect    = aspect
         )
 
         geom.lerp_verts(self.vertices, self.vbackbuffer, self.lerp_alpha)
@@ -118,8 +119,7 @@ class FaceRenderer:
 
 
     def __draw_iris(self, facelms, cam: idk.Camera) -> None:
-
-        aspect = 640/480
+        aspect = defs.IMG_W / defs.IMG_H
 
 
         v0 = facelms.landmark[FACEMESH_RIGHT_IRIS[0][0]]

@@ -16,15 +16,19 @@ from handrenderer import HandRenderer
 from facerenderer import FaceRenderer
 from facecontroller import FaceController
 
+import definitions as defs
 
 def cv_thread_fn( ren: idk.Renderer, handDetector: HandDetector, faceDetector: FaceDetector ):
     cap = cv.VideoCapture(0)
-    cap.set(cv.CAP_PROP_FRAME_WIDTH,  640)
-    cap.set(cv.CAP_PROP_FRAME_HEIGHT, 480)
+    # cap.set(cv.CAP_PROP_FRAME_WIDTH,  640)
+    # cap.set(cv.CAP_PROP_FRAME_HEIGHT, 480)
 
 
     while ren.running():
         res, img = cap.read()
+
+        defs.IMG_H = img.shape[0]
+        defs.IMG_W = img.shape[1]
 
         faceDetector.detect(img)
         img = faceDetector.draw(img)
