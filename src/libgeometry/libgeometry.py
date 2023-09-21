@@ -31,8 +31,7 @@ def calculate_normals(vertices: np.ndarray, indices: np.ndarray):
 
 
 def load_CFM( vertices_path: str, indices_path: str ):
-    vertices, indices = __libgeom.load_CFM(vertices_path, indices_path)
-    return vertices, indices
+    return __libgeom.load_CFM(vertices_path, indices_path)
 
 
 def lmarks_to_np( landmarks, nparray: np.ndarray, aspect ):

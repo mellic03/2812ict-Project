@@ -22,6 +22,7 @@ def cv_thread_fn( ren: idk.Renderer, handDetector: HandDetector, faceDetector: F
     cap.set(cv.CAP_PROP_FRAME_WIDTH,  640)
     cap.set(cv.CAP_PROP_FRAME_HEIGHT, 480)
 
+
     while ren.running():
         res, img = cap.read()
 
@@ -46,7 +47,7 @@ def gl_thread_fn( ren: idk.Renderer, handDetector: HandDetector, faceDetector: F
 
     cam = idk.Camera(80.0, width/height, 0.1, 1000.0)
     # cam.translate(glm.vec3(-1.0, -1.0, -1.0))
-    cam.yaw(glm.radians(180))
+    # cam.yaw(glm.radians(180))
 
 
     sky = idk.Model()

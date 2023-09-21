@@ -18,6 +18,19 @@ import libgeometry as geom
 from face_vertices import *
 
 
+def collect_avg( vertices ) -> glm.vec3:
+    avg = glm.vec3(0.0)
+    count = 0
+    for i in range(0, len(vertices), 8):
+        avg += glm.vec3(
+            vertices[i+0],
+            vertices[i+1],
+            vertices[i+2],
+        )
+        count += 1
+    return avg / count
+
+
 class FaceRenderer:
 
     def __reload_ini(self) -> None:
@@ -59,15 +72,26 @@ class FaceRenderer:
         self.face_shader = idk.compileShaderProgram("src/shaders/", "general.vs", "face/face.fs")
 
 
-    def __init__(self, configpath: str) -> None:
+    def __init__(self, configpath: str, eyeholes: bool = True) -> None:
         self.config_path = configpath
 
-        self.vertices, self.indices = geom.load_CFM("data/vertices.txt", "data/indices.txt")
+        filepath = "data/indices.txt"
+        if eyeholes:
+            filepath = "data/indices2.txt"
+
+        self.vertices, self.indices = geom.load_CFM("data/vertices.txt", filepath)
         self.vbackbuffer = np.empty_like(self.vertices, dtype=np.float32)
         self.face_mh = idk.loadVerticesIndexed(self.vertices, self.indices, GL_DYNAMIC_DRAW)
 
-        self.iris_verts = np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], dtype=np.float32)
+        self.specmap = idk.loadTexture(b"textures/specmap2.png")
+
+        self.iris_verts = np.array([0]*8*12, dtype=np.float32)
         self.iris_mh = idk.loadVertices(self.iris_verts, GL_DYNAMIC_DRAW)
+        self.iris_verts = self.iris_verts.reshape((12, 8))
+        self.iris_l_pos = glm.vec3(0.0)
+        self.iris_l_nrm = glm.vec3(0.0)
+        self.iris_r_pos = glm.vec3(0.0)
+        self.iris_r_nrm = glm.vec3(0.0)
 
         sphere = idk.Model()
         self.sphere_mh = sphere.loadOBJ(b"models/icosphere.obj")
@@ -97,22 +121,52 @@ class FaceRenderer:
 
         aspect = 640/480
 
-        vertices = [  ] # np.ndarray((3, 8), dtype=np.float32)
+
+        v0 = facelms.landmark[FACEMESH_RIGHT_IRIS[0][0]]
+        v1 = facelms.landmark[FACEMESH_RIGHT_IRIS[1][0]]
+        v2 = facelms.landmark[FACEMESH_RIGHT_IRIS[2][0]]
+        v3 = facelms.landmark[FACEMESH_RIGHT_IRIS[3][0]]
+
+        vertices1 = [  ]
+        vertices1 += [ aspect*(v0.x-0.5), v0.y-0.5, v0.z, 0, 0, 0, 0, 0 ]
+        vertices1 += [ aspect*(v1.x-0.5), v1.y-0.5, v1.z, 0, 0, 0, 0, 0 ]
+        vertices1 += [ aspect*(v2.x-0.5), v2.y-0.5, v2.z, 0, 0, 0, 0, 0 ]
+        vertices1 += [ aspect*(v0.x-0.5), v0.y-0.5, v0.z, 0, 0, 0, 0, 0 ]
+        vertices1 += [ aspect*(v2.x-0.5), v2.y-0.5, v2.z, 0, 0, 0, 0, 0 ]
+        vertices1 += [ aspect*(v3.x-0.5), v3.y-0.5, v3.z, 0, 0, 0, 0, 0 ]
+        self.iris_r_pos = collect_avg(vertices1)
+
+        v0 = glm.vec3(v0.x, v0.y, v0.z)
+        v1 = glm.vec3(v1.x, v1.y, v1.z)
+        v2 = glm.vec3(v2.x, v2.y, v2.z)
+        v3 = glm.vec3(v3.x, v3.y, v3.z)
+        self.iris_r_nrm = glm.normalize(glm.cross(v2-v0, v3-v0))
+
 
         v0 = facelms.landmark[FACEMESH_LEFT_IRIS[0][0]]
         v1 = facelms.landmark[FACEMESH_LEFT_IRIS[1][0]]
         v2 = facelms.landmark[FACEMESH_LEFT_IRIS[2][0]]
         v3 = facelms.landmark[FACEMESH_LEFT_IRIS[3][0]]
 
-        vertices += [ aspect*(v0.x-0.5), v0.y-0.5, v0.z, 0, 0, 0, 0, 0 ]
-        vertices += [ aspect*(v1.x-0.5), v1.y-0.5, v1.z, 0, 0, 0, 0, 0 ]
-        vertices += [ aspect*(v2.x-0.5), v2.y-0.5, v2.z, 0, 0, 0, 0, 0 ]
+        vertices2 = [  ]
+        vertices2 += [ aspect*(v0.x-0.5), v0.y-0.5, v0.z, 0, 0, 0, 0, 0 ]
+        vertices2 += [ aspect*(v1.x-0.5), v1.y-0.5, v1.z, 0, 0, 0, 0, 0 ]
+        vertices2 += [ aspect*(v2.x-0.5), v2.y-0.5, v2.z, 0, 0, 0, 0, 0 ]
+        vertices2 += [ aspect*(v0.x-0.5), v0.y-0.5, v0.z, 0, 0, 0, 0, 0 ]
+        vertices2 += [ aspect*(v2.x-0.5), v2.y-0.5, v2.z, 0, 0, 0, 0, 0 ]
+        vertices2 += [ aspect*(v3.x-0.5), v3.y-0.5, v3.z, 0, 0, 0, 0, 0 ]
+        self.iris_l_pos = collect_avg(vertices2)
 
-        # idk.subData(self.iris_mh, vertices)
+        v0 = glm.vec3(v0.x, v0.y, v0.z)
+        v1 = glm.vec3(v1.x, v1.y, v1.z)
+        v2 = glm.vec3(v2.x, v2.y, v2.z)
+        v3 = glm.vec3(v3.x, v3.y, v3.z)
+        self.iris_l_nrm = glm.normalize(glm.cross(v2-v0, v3-v0))
 
-        vertices = np.array(vertices, dtype=np.float32)
-
-        eee = idk.loadVertices(vertices, GL_DYNAMIC_DRAW)
+        vertices = np.array(vertices1+vertices2, dtype=np.float32).reshape((12, 8))
+        # self.iris_verts = self.iris_verts.reshape((12, 8))
+        geom.lerp_verts(self.iris_verts, vertices, self.lerp_alpha)
+        idk.subData(self.iris_mh, self.iris_verts)
 
         rotation = glm.rotate(self.theta, glm.vec3(0.0, 1.0, 0.0))
         translation = glm.translate(glm.vec3(-2.0, -1.5, 0.0))
@@ -122,9 +176,9 @@ class FaceRenderer:
         glUseProgram(self.iris_shader)
         idk.setmat4(self.iris_shader, "un_proj", cam.projection())
         idk.setmat4(self.iris_shader, "un_view", cam.viewMatrix())
-        idk.setmat4(self.iris_shader, "un_model", transform * glm.scale(glm.vec3(-1, 1, 1)))
-        idk.setvec3(self.iris_shader, "un_color", glm.vec3(1.0, 0.0, 1.0))
-        idk.drawVertices(eee)
+        idk.setmat4(self.iris_shader, "un_model", transform*glm.scale(glm.vec3(-1, 1, 1)))
+        idk.setvec3(self.iris_shader, "un_color", self.iris_color)
+        idk.drawVertices(self.iris_mh)
 
 
     def __draw_face(self, cam: idk.Camera) -> None:
@@ -139,12 +193,13 @@ class FaceRenderer:
         transform =  translation * scale * rotation
 
         glUseProgram(current_shader)
-        idk.setmat4(current_shader, "un_view",     cam.viewMatrix())
-        idk.setvec3(current_shader, "un_view_pos", cam.position()  )
-        idk.setmat4(current_shader, "un_proj",     cam.projection())
-        idk.setmat4(current_shader, "un_model",    transform * glm.scale(glm.vec3(-1, 1, 1)))
-        idk.setvec3(current_shader, "un_color",    self.skin_color)
-        idk.setvec3(current_shader, "un_specular", self.specular)
+        idk.setTexture(current_shader, 1, self.specmap, "un_specmap")
+        idk.setmat4(current_shader,  "un_view",     cam.viewMatrix())
+        idk.setmat4(current_shader,  "un_proj",     cam.projection())
+        idk.setmat4(current_shader,  "un_model",    transform*glm.scale(glm.vec3(-1, 1, 1)))
+        idk.setvec3(current_shader,  "un_color",    self.skin_color)
+        idk.setvec3(current_shader,  "un_specular", self.specular)
+        idk.setvec3(current_shader,  "un_view_pos", cam.position())
         idk.setfloat(current_shader, "un_spec_exponent", self.spec_exp)
 
         glUseProgram(current_shader)

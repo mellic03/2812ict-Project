@@ -2,6 +2,7 @@ import glm as glm
 import numpy as np
 import ctypes
 import os
+import definitions as defs
 
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
@@ -50,13 +51,9 @@ def load_CFM( vertices_path: str, indices_path: str ):
 
     # The number of indices is same as the number of
     # vertices because indexed rendering is used.
-    NUM_FLOATS  = (2340 // 5) * 8
-    NUM_INDICES = 2640
-    # NUM_FLOATS  = (2500 // 5) * 8
-    # NUM_INDICES = 2700
 
-    vertices = np.ndarray((NUM_FLOATS,),  dtype=np.float32)
-    indices  = np.ndarray((NUM_INDICES,), dtype=np.uint32)
+    vertices = np.ndarray((defs.FACE_NUM_FLOATS,),  dtype=np.float32)
+    indices  = np.ndarray((defs.FACE_NUM_INDICES,), dtype=np.uint32)
 
     vpath = vertices_path.encode('utf-8')
     ipath = indices_path.encode('utf-8')
@@ -66,7 +63,7 @@ def load_CFM( vertices_path: str, indices_path: str ):
         indices,    indices.size,   ipath
     )
 
-    vertices = vertices.reshape(NUM_FLOATS//8, 8)
+    vertices = vertices.reshape(defs.FACE_NUM_VERTS, 8)
     return vertices, indices
 
 

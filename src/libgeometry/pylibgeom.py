@@ -6,19 +6,18 @@
 import glm as glm
 import numpy as np
 import ctypes
+import definitions as defs
 
 
-NUM_INDICES = 2640
 
 
-adj_normals = np.ndarray((NUM_INDICES, NUM_INDICES, 3))
+adj_normals = np.ndarray((defs.FACE_NUM_INDICES, defs.FACE_NUM_INDICES, 3))
 
 
 def load_CFM( vertices_path: str, indices_path: str ):
-    NUM_FLOATS  = (2340 // 5) * 8
 
-    vertices = np.ndarray((NUM_FLOATS), dtype=np.float32)
-    indices  = np.ndarray((NUM_INDICES), dtype=np.uint32)
+    vertices = np.ndarray((defs.FACE_NUM_FLOATS), dtype=np.float32)
+    indices  = np.ndarray((defs.FACE_NUM_INDICES), dtype=np.uint32)
     
     count = 0
     i = 0
@@ -48,7 +47,7 @@ def load_CFM( vertices_path: str, indices_path: str ):
             indices[i] = int(line.strip("\n"))
             i += 1
 
-    vertices = vertices.reshape((NUM_FLOATS//8, 8))
+    vertices = vertices.reshape((defs.FACE_NUM_VERTS, 8))
 
     return vertices, indices
 

@@ -101,7 +101,7 @@ class Camera:
 
 
     def position(self) -> glm.vec3:
-        return glm.vec3(self.__transform.modelMatrix()[3])
+        return glm.vec3(glm.inverse(self.__transform.modelMatrix())[3])
 
 
     def onEvent(self, state, dtime=1.0):

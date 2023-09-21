@@ -35,6 +35,7 @@ void main()
     // vec3 albedo = fsin_normal;
     vec3 albedo = texture(un_texture, fsin_texcoords).rgb;
 
+
     vec3 ambient  = albedo * light_ambient;
     vec3 diffuse  = albedo * diffuse_f * light_diffuse;
     vec3 specular = albedo * specular_f * un_specular;

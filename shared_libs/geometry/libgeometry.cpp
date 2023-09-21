@@ -3,11 +3,27 @@
 #include <stdint.h>
 #include <cmath>
 #include <vector>
+#include <sstream>
 
 // #include <GL/glew.h>
 // #include <GL/gl.h>
 #include "fakeglm.hpp"
 
+
+template <typename T>
+std::vector<T> tokenize( std::string str )
+{
+    std::vector<T> tokens;
+    std::stringstream ss(str);
+    T token;
+
+    while (ss >> token)
+    {
+        tokens.push_back(token);
+    }
+
+    return tokens;
+}
 
 
 std::vector<std::vector<glm::vec3>> adj_normals;
@@ -128,8 +144,13 @@ load_CFM(
         if (line == "")
             continue;
 
-        indices[i] = std::stoi(line);
-        i += 1;
+        std::vector<int> abc = tokenize<int>(line);
+
+        indices[i+0] = abc[0];
+        indices[i+1] = abc[1];
+        indices[i+2] = abc[2];
+
+        i += 3;
     }
 }
 

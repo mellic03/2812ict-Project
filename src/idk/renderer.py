@@ -277,8 +277,6 @@ def loadTexture(filepath):
 
 
 
-
-
 # Compile a vertex and fragment shader and return an identifying GLuint ID
 def compileShaderProgram(root: str, vert: str, frag: str) -> GLuint:
     vert_src: str
@@ -384,7 +382,7 @@ def loadVerticesIndexed(vertices: np.ndarray, indices: np.ndarray, usage=GL_STAT
 def subData( mh, vertices: np.ndarray ):
     glBindVertexArray(mh.VAO)
     glBindBuffer(GL_ARRAY_BUFFER, mh.VBO)
-    glBufferSubData(GL_ARRAY_BUFFER, 0, vertices.nbytes, vertices)
+    glBufferData(GL_ARRAY_BUFFER, vertices.nbytes, vertices, GL_DYNAMIC_DRAW)
     glBindVertexArray(0)
 
 
@@ -414,6 +412,13 @@ def drawVerticesIndexed(mh: ModelHandle, gl_mode=GL_TRIANGLES) -> None:
     glBindVertexArray(mh.VAO)
     glDrawElements(gl_mode, mh.num_elements, GL_UNSIGNED_INT, ctypes.c_void_p(0))
     glBindVertexArray(0)
+
+
+def setTexture( shader_id, texture_unit, glTextureID, name ):
+    glActiveTexture(GL_TEXTURE0 + texture_unit)
+    glBindTexture(GL_TEXTURE_2D, glTextureID)
+    setint(shader_id, name, texture_unit)
+
 
 
 def drawVerticesIndexedTextured(mh: ModelHandle, shader_id, gl_mode=GL_TRIANGLES) -> None:
