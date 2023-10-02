@@ -6,12 +6,6 @@ import idk
 from sdl2 import *
 
 import numpy as np
-import cv2 as cv
-import mediapipe as mp
-from mediapipe.tasks import python
-from mediapipe.tasks.python import vision
-import math
-
 import configparser
 import libgeometry as geom
 
@@ -69,13 +63,28 @@ class FaceRenderer:
 
 
     def __reload_shaders(self) -> None:
-        self.iris_shader = idk.compileShaderProgram("src/shaders/", "general.vs", "face/iris.fs")
-        self.face_shader_tex = idk.compileShaderProgram("src/shaders/", "general.vs", "face/face-tex.fs")
-        self.face_shader = idk.compileShaderProgram("src/shaders/", "general.vs", "face/face.fs")
+        self.iris_shader = idk.compileShaderProgram(
+            "src/shaders/", "general.vs", "face/iris.fs"
+        )
+        self.face_shader_tex = idk.compileShaderProgram(
+            "src/shaders/", "general.vs", self.face_shader_tex_path
+        )
+        self.face_shader = idk.compileShaderProgram(
+            "src/shaders/", "general.vs", self.face_shader_path
+        )
 
 
     def __init__(self, configpath: str, eyeholes: bool = True) -> None:
         self.config_path = configpath
+
+        self.iris_shader_path = "face/iris.fs"
+
+        if defs.USE_PYTHON:
+            self.face_shader_tex_path = "face/face-tex-py.fs"
+            self.face_shader_path = "face/face-py.fs"
+        else:
+            self.face_shader_tex_path = "face/face-tex.fs"
+            self.face_shader_path = "face/face.fs"
 
         filepath = "data/indices.txt"
         if eyeholes:
@@ -108,11 +117,7 @@ class FaceRenderer:
     def __preprocess_vertices(self, facelms) -> None:
         aspect = defs.IMG_W / defs.IMG_H
 
-        geom.lmarks_to_np(
-            landmarks = facelms.landmark,
-            nparray   = self.vbackbuffer,
-            aspect    = aspect
-        )
+        self.vbackbuffer = geom.lmarks_to_np(facelms.landmark, self.vbackbuffer, aspect)
 
         geom.lerp_verts(self.vertices, self.vbackbuffer, self.lerp_alpha)
         geom.calculate_normals(self.vertices, self.indices)
@@ -164,7 +169,6 @@ class FaceRenderer:
         self.iris_l_nrm = glm.normalize(glm.cross(v2-v0, v3-v0))
 
         vertices = np.array(vertices1+vertices2, dtype=np.float32).reshape((12, 8))
-        # self.iris_verts = self.iris_verts.reshape((12, 8))
         geom.lerp_verts(self.iris_verts, vertices, self.lerp_alpha)
         idk.subData(self.iris_mh, self.iris_verts)
 
@@ -187,10 +191,10 @@ class FaceRenderer:
         if self.use_face_texture:
             current_shader = self.face_shader_tex
 
-        rotation = glm.rotate(self.theta, glm.vec3(0.0, 1.0, 0.0))
+        rotation    = glm.rotate(self.theta, glm.vec3(0.0, 1.0, 0.0))
         translation = glm.translate(glm.vec3(-2.0, -1.5, 0.0))
-        scale = glm.scale(glm.vec3(2.0))
-        transform =  translation * scale * rotation
+        scale       = glm.scale(glm.vec3(2.0))
+        transform   = translation * scale * rotation
 
         glUseProgram(current_shader)
         idk.setTexture(current_shader, 1, self.specmap, "un_specmap")
@@ -226,7 +230,6 @@ class FaceRenderer:
 
         for facelms in results.multi_face_landmarks:
             self.__draw_iris(facelms, cam)
-
 
 
     def onEvent(self, state, dtime=1.0) -> None:

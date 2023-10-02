@@ -82,9 +82,9 @@ class FaceController():
         xmax -= xmin
         eye_x = fh.iris_l_pos.x - xmin
 
-        eye_x = (eye_x / xmax) - 0.5
-        # self.__last_leye_x = glm.lerp(self.__last_leye_x, eye_x, self.eyeconfig["lerp_alpha"])
-        normal = (glm.vec3(eye_x, 0.0, 0.0))
+        # eye_x = (eye_x / xmax) - 0.5
+        # normal = (glm.vec3(eye_x, 0.0, 0.0))
+        normal = (glm.vec3(1, 0.0, 0.0))
 
         return normal
 
@@ -100,9 +100,9 @@ class FaceController():
         xmax -= xmin
         eye_x = fh.iris_r_pos.x - xmin
 
-        eye_x = (eye_x / xmax) - 0.5
-        # self.__last_reye_x = glm.lerp(self.__last_reye_x, eye_x, self.eyeconfig["lerp_alpha"])
-        normal = (glm.vec3(eye_x, 0.0, 0.0))
+        # eye_x = (eye_x / xmax) - 0.5
+        # normal = (glm.vec3(eye_x, 0.0, 0.0))
+        normal = (glm.vec3(1, 0.0, 0.0))
 
         return normal
 
@@ -152,7 +152,6 @@ class FaceController():
             temp_rot += self.eyeconfig["temp_strength"] * glm.dot(self.__delta_eye, direction)
         elif dot > 0:
             temp_rot += self.eyeconfig["temp_strength"] * glm.dot(self.__delta_eye, direction)
-
 
         return temp_rot + perm_rot
 

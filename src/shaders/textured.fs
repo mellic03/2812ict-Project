@@ -41,7 +41,7 @@ void main()
     vec3 specular = albedo * specular_f * un_spec_strength;
     vec3 result   = ambient + diffuse + specular;
 
-    fsout_color = vec4(result, 1.0);
+    fsout_color = vec4(albedo, 1.0);
 
 }
 

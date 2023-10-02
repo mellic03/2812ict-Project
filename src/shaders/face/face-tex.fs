@@ -31,10 +31,7 @@ void main()
     float specular_f = pow(max(dot(fsin_normal, halfway_dir), 0.0), un_spec_exponent);
 
 
-    // vec3 albedo = un_color;
-    // vec3 albedo = fsin_normal;
     vec3 albedo = texture(un_texture, fsin_texcoords).rgb;
-
 
     vec3 ambient  = albedo * light_ambient;
     vec3 diffuse  = albedo * diffuse_f * light_diffuse;

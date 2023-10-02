@@ -9,7 +9,7 @@ import sdl2.ext
 import threading
 import cv2 as cv
 import numpy as np
-import client
+import configparser
 
 from detectors import *
 from handrenderer import HandRenderer
@@ -17,21 +17,52 @@ from facerenderer import FaceRenderer
 from facecontroller import FaceController
 
 import definitions as defs
+import sys
+
+
+def preprocess_img( img ):
+
+    gray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
+    lap = cv.Laplacian(gray, -1, ksize=5, scale=1, delta=0, borderType=cv.BORDER_DEFAULT)
+    lap = cv.cvtColor(lap, cv.COLOR_GRAY2BGR)
+
+    # lap = cv.resize(lap, (0, 0), fx=0.5, fy=0.5, interpolation=cv.INTER_LINEAR)
+    # lap = cv.GaussianBlur(lap, (7, 7), 0)
+
+    # lap = cv.resize(lap, (0, 0), fx=2, fy=2, interpolation=cv.INTER_LINEAR)
+    # lap = cv.GaussianBlur(lap, (3, 3), 0)
+
+    lap = np.uint8(lap / 2)
+
+    return img
+
+
+
+global hgrabbing
+hgrabbing = False
+
 
 def cv_thread_fn( ren: idk.Renderer, handDetector: HandDetector, faceDetector: FaceDetector ):
-    cap = cv.VideoCapture(0)
-    # cap.set(cv.CAP_PROP_FRAME_WIDTH,  640)
-    # cap.set(cv.CAP_PROP_FRAME_HEIGHT, 480)
-
+    cap = cv.VideoCapture(1)
+    # cap.set(cv.CAP_PROP_FRAME_WIDTH,  1280)
+    # cap.set(cv.CAP_PROP_FRAME_HEIGHT, 720)
 
     while ren.running():
         res, img = cap.read()
+
+        if res == False:
+            continue
+
+        img = preprocess_img(img)
 
         defs.IMG_H = img.shape[0]
         defs.IMG_W = img.shape[1]
 
         faceDetector.detect(img)
         img = faceDetector.draw(img)
+
+        global hgrabbing
+        handDetector.grabbing = hgrabbing
 
         handDetector.detect(img)
         img = handDetector.draw(img)
@@ -47,11 +78,10 @@ def gl_thread_fn( ren: idk.Renderer, handDetector: HandDetector, faceDetector: F
     height = 1200
     ren.ren_init()
     glDisable(GL_CULL_FACE)
-    SDL_GL_SetSwapInterval(0)
+    glEnable(GL_MULTISAMPLE)
 
+    SDL_GL_SetSwapInterval(0)
     cam = idk.Camera(80.0, width/height, 0.1, 1000.0)
-    # cam.translate(glm.vec3(-1.0, -1.0, -1.0))
-    # cam.yaw(glm.radians(180))
 
 
     sky = idk.Model()
@@ -59,14 +89,16 @@ def gl_thread_fn( ren: idk.Renderer, handDetector: HandDetector, faceDetector: F
     sky_shader = idk.compileShaderProgram("src/shaders/", "general.vs", "skybox.fs")
 
     grass = idk.Model()
-    grass_mh = grass.loadOBJ(b"models/grass.obj", b"textures/grass.png")
+    grass_mh = grass.loadOBJ(b"models/report.obj", b"textures/report.png")
     grass_shader = idk.compileShaderProgram("src/shaders/", "general.vs", "textured.fs")
 
-    handRenderer = HandRenderer("config/hand.ini")
-    faceRenderer = FaceRenderer("config/fRenderer.ini")
-    faceController = FaceController("config/fController.ini")
+    cockpit = idk.Model()
+    cockpit_mh = cockpit.loadOBJ(b"models/cockpit.obj", b"textures/palette.png")
 
-    faceverts = [ np.ndarray((468, 8), dtype=np.float32) for i in range(0, 2) ]
+    handRenderer_L = HandRenderer("config/hand.ini")
+    handRenderer_R = HandRenderer("config/hand.ini")
+    faceRenderer   = FaceRenderer("config/fRenderer.ini")
+    faceController = FaceController("config/fController.ini")
 
 
     dtime = SDL_GetTicks64()
@@ -100,11 +132,26 @@ def gl_thread_fn( ren: idk.Renderer, handDetector: HandDetector, faceDetector: F
             idk.drawVerticesTextured(grass_shader, grass_mh)
             # ---------------------------------------------------------
 
+            # Cockpit
+            # ---------------------------------------------------------
+            glUseProgram(grass_shader)
+            idk.setmat4(sky_shader, "un_proj", cam.projection())
+            idk.setmat4(sky_shader, "un_view", cam.viewMatrix())
 
-            handRenderer.draw(handDetector, cam)
+            rotation = glm.rotate(glm.radians(-90), glm.vec3(0.0, 1.0, 0.0))
+            translation = glm.translate(glm.vec3(10.0, -3.0, 0.0))
+            idk.setmat4(sky_shader, "un_model", translation * rotation)
+            idk.drawVerticesTextured(grass_shader, cockpit_mh)
+            # ---------------------------------------------------------
+
+
+            handRenderer_L.draw(handDetector, cam, "Left")
+            handRenderer_R.draw(handDetector, cam, "Right")
             faceRenderer.draw(faceDetector, cam, dtime)
             faceController.update(faceRenderer, cam)
 
+            global hgrabbing
+            hgrabbing = handRenderer_L.grabbing
 
             state = sdl2.SDL_GetKeyboardState(None)
             cam.onEvent(state, dtime)
@@ -119,6 +166,17 @@ def gl_thread_fn( ren: idk.Renderer, handDetector: HandDetector, faceDetector: F
 
 
 def main():
+    if len(sys.argv) > 1 and sys.argv[1] == "USE_CPP":
+        defs.USE_Python = False
+        defs.USE_CPP    = True
+    else:
+        defs.USE_PYTHON = True
+        defs.USE_CPP    = False
+
+    config = configparser.ConfigParser()
+    config.read("config/camera.ini")
+    defs.FOCAL_LENGTH = float(config["specifications"]["focal-length"])
+
     ren = idk.Renderer(b"window", 1500, 1200, False )
     handDetector = HandDetector()
     faceDetector = FaceDetector()

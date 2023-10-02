@@ -29,11 +29,6 @@ class Model:
         pass
 
 
-    def __load_mtl(self, filepath):
-        fh = open(filepath, "r")
-        return
-
-
     def __obj_extractFaceIndices(self, abc: str):
         arr = abc.split("/")
         return [int(arr[0])-1, int(arr[1])-1, int(arr[2])-1]
