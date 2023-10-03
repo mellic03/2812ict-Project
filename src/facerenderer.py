@@ -111,21 +111,20 @@ class FaceRenderer:
         self.__reload_ini()
 
         self.ready = False
-        self.theta = 0.0
+        self.theta = 3.14159
 
 
     def __preprocess_vertices(self, facelms) -> None:
         aspect = defs.IMG_W / defs.IMG_H
 
-        self.vbackbuffer = geom.lmarks_to_np(facelms.landmark, self.vbackbuffer, aspect)
+        self.vbackbuffer = geom.lmarks_to_np(facelms.landmark, self.vbackbuffer, aspect, glm.vec2(-0.5, -0.5))
 
         geom.lerp_verts(self.vertices, self.vbackbuffer, self.lerp_alpha)
         geom.calculate_normals(self.vertices, self.indices)
 
 
-    def __draw_iris(self, facelms, cam: idk.Camera) -> None:
+    def __draw_iris(self, facelms, cam: idk.Camera, translation = glm.vec3(0.0)) -> None:
         aspect = defs.IMG_W / defs.IMG_H
-
 
         v0 = facelms.landmark[FACEMESH_RIGHT_IRIS[0][0]]
         v1 = facelms.landmark[FACEMESH_RIGHT_IRIS[1][0]]
@@ -173,9 +172,9 @@ class FaceRenderer:
         idk.subData(self.iris_mh, self.iris_verts)
 
         rotation = glm.rotate(self.theta, glm.vec3(0.0, 1.0, 0.0))
-        translation = glm.translate(glm.vec3(-2.0, -1.5, 0.0))
+        trans = glm.translate(translation)
         scale = glm.scale(glm.vec3(2.0))
-        transform =  translation * scale * rotation
+        transform =  trans * scale * rotation
 
         glUseProgram(self.iris_shader)
         idk.setmat4(self.iris_shader, "un_proj", cam.projection())
@@ -185,16 +184,16 @@ class FaceRenderer:
         idk.drawVertices(self.iris_mh)
 
 
-    def __draw_face(self, cam: idk.Camera) -> None:
+    def __draw_face(self, cam: idk.Camera, translation = glm.vec3(0.0)) -> None:
         current_shader = self.face_shader
 
         if self.use_face_texture:
             current_shader = self.face_shader_tex
 
         rotation    = glm.rotate(self.theta, glm.vec3(0.0, 1.0, 0.0))
-        translation = glm.translate(glm.vec3(-2.0, -1.5, 0.0))
+        trans       = glm.translate(translation)
         scale       = glm.scale(glm.vec3(2.0))
-        transform   = translation * scale * rotation
+        transform   = trans * scale * rotation
 
         glUseProgram(current_shader)
         idk.setTexture(current_shader, 1, self.specmap, "un_specmap")
@@ -215,6 +214,7 @@ class FaceRenderer:
             idk.drawVerticesIndexed(self.face_mh)
 
 
+
     def draw(self, faceDetector, cam: idk.Camera, dtime) -> None:
 
         results = faceDetector.m_results
@@ -226,10 +226,12 @@ class FaceRenderer:
         for facelms in results.multi_face_landmarks:
             self.__preprocess_vertices(facelms)
 
-        self.__draw_face(cam)
+        self.__draw_face(cam, glm.vec3(6.0, -1.5, -2.0))
+        self.__draw_face(cam, glm.vec3(12.0, -1.5, -2.0))
 
         for facelms in results.multi_face_landmarks:
-            self.__draw_iris(facelms, cam)
+            self.__draw_iris(facelms, cam, glm.vec3(6.0, -1.5, -2.0))
+            self.__draw_iris(facelms, cam, glm.vec3(12.0, -1.5, -2.0))
 
 
     def onEvent(self, state, dtime=1.0) -> None:

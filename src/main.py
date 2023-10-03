@@ -134,14 +134,14 @@ def gl_thread_fn( ren: idk.Renderer, handDetector: HandDetector, faceDetector: F
 
             # Cockpit
             # ---------------------------------------------------------
-            glUseProgram(grass_shader)
-            idk.setmat4(sky_shader, "un_proj", cam.projection())
-            idk.setmat4(sky_shader, "un_view", cam.viewMatrix())
+            # glUseProgram(grass_shader)
+            # idk.setmat4(sky_shader, "un_proj", cam.projection())
+            # idk.setmat4(sky_shader, "un_view", cam.viewMatrix())
 
-            rotation = glm.rotate(glm.radians(-90), glm.vec3(0.0, 1.0, 0.0))
-            translation = glm.translate(glm.vec3(10.0, -3.0, 0.0))
-            idk.setmat4(sky_shader, "un_model", translation * rotation)
-            idk.drawVerticesTextured(grass_shader, cockpit_mh)
+            # rotation = glm.rotate(glm.radians(-90), glm.vec3(0.0, 1.0, 0.0))
+            # translation = glm.translate(glm.vec3(10.0, -3.0, 0.0))
+            # idk.setmat4(sky_shader, "un_model", translation * rotation)
+            # idk.drawVerticesTextured(grass_shader, cockpit_mh)
             # ---------------------------------------------------------
 
 

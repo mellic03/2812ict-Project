@@ -6,7 +6,7 @@ in vec3 fsin_fragpos;
 in vec3 fsin_normal;
 in vec2 fsin_texcoords;
 
-const vec3 light_direction = vec3(1.0, 1.0, 1.0);
+const vec3 light_direction = vec3(1.0, 1.0, -1.0);
 
 uniform vec3 un_color;
 uniform vec3 un_specular;
@@ -22,7 +22,6 @@ void main()
     vec3 view_dir = normalize(un_view_pos - fsin_fragpos);
 
     vec3 frag_to_light = normalize(-light_direction);
-    // float diffuse_f = max(dot(fsin_normal, frag_to_light), 0.0);
     float diffuse_f = dot(fsin_normal, frag_to_light);
     diffuse_f = (diffuse_f + 1.0) / 2.0;
 

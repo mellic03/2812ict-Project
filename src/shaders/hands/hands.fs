@@ -5,7 +5,7 @@ out vec4 fsout_color;
 in vec3 fsin_fragpos;
 in vec3 fsin_normal;
 
-const vec3 light_direction = vec3(-5.0, 5.0, 5.0);
+const vec3 light_direction = vec3(1.0, 1.0, -1.0);
 const float spec_exponent = 16;
 
 uniform vec3 un_color;

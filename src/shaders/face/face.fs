@@ -6,7 +6,7 @@ in vec3 fsin_fragpos;
 in vec3 fsin_normal;
 in vec2 fsin_texcoords;
 
-const vec3 light_direction = vec3(1.0, 1.0, 1.0);
+const vec3 light_direction = vec3(1.0, 1.0, -1.0);
 
 uniform vec3 un_color;
 uniform vec3 un_specular;

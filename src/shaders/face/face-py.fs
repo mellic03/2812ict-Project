@@ -6,8 +6,6 @@ uniform vec3 un_color;
 
 void main()
 {
-
     fsout_color = vec4(un_color, 1.0);
-
 }
 

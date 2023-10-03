@@ -34,14 +34,14 @@ def load_CFM( vertices_path: str, indices_path: str ):
     return __libgeom.load_CFM(vertices_path, indices_path)
 
 
-def lmarks_to_np( landmarks, output: np.ndarray, aspect ) -> np.ndarray:
+def lmarks_to_np( landmarks, output: np.ndarray, aspect, offset=glm.vec2(-0.5, -0.5) ) -> np.ndarray:
 
     for i in range(0, len(landmarks)):
         if i >= output.shape[0]:
             break
         v = landmarks[i]
-        output[i][0] = (v.x-0.5) * aspect
-        output[i][1] = (v.y-0.5)
+        output[i][0] = (v.x + offset.x) * aspect
+        output[i][1] = (v.y + offset.y)
         output[i][2] = v.z
 
     return output
