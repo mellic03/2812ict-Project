@@ -1,23 +1,19 @@
 from OpenGL.GL import *
 import glm as glm
-
 import idk
 from sdl2 import *
-
-import numpy as np
-import cv2 as cv
-import mediapipe as mp
-from mediapipe.tasks import python
-from mediapipe.tasks.python import vision
-import math
-
 import configparser
-import libgeometry as geom
-
 from face_vertices import *
-
 from facerenderer import FaceRenderer
 
+import methods
+import definitions as defs
+
+
+LM_LEFT_BROW   = 223
+LM_RIGHT_BROW  = 443
+LM_CENTER_BROW = 168
+LM_PHILTRUM    = 164
 
 
 def collect_avg( vertices, indices ) -> glm.vec3:
@@ -63,12 +59,38 @@ class FaceController():
             "lerp_alpha":     float(eyeconfig["lerp_alpha"]),
             "temp_strength":  float(eyeconfig["temp_strength"]),
         }
+        self.measurements = {
+            "IPD_mm":      float(self.config["measurements"]["inter-pupillary-distance-mm"]),
+            "BPD_mm":      float(self.config["measurements"]["brow-philtrum-distance-mm"])
+        }
+
 
 
     def __init__(self, configpath) -> None:
         self.configpath = configpath
         self.config = configparser.ConfigParser()
         self.__reload_ini()
+
+        self.__philtrum    = glm.vec3(0.0)
+        self.__front       = glm.vec3(0.0)
+        self.__translation = glm.vec3(0.0)
+        self.__depth       = 0.0
+
+
+    def philtrum(self) -> glm.vec3:
+        return self.__philtrum
+
+
+    def front(self) -> glm.vec3:
+        return self.__front
+
+
+    def translation(self) -> glm.vec3:
+        return self.__translation
+    
+
+    def depth(self) -> float:
+        return self.__depth
 
 
     __last_leye_x = 0.0
@@ -121,8 +143,14 @@ class FaceController():
 
 
     def __camera_compute_orientation( self, fh ) -> glm.vec3:
-        filtrum = glm.vec3(fh.vertices[164][0:4])
-        normal = glm.normalize(glm.cross(fh.iris_l_pos-filtrum, fh.iris_r_pos-filtrum))
+        philtrum = glm.vec3(fh.vertices[164][0:4])
+        left_brow = glm.vec3(fh.vertices[223][0:4])
+        right_brow = glm.vec3(fh.vertices[443][0:4])
+
+        normal = glm.normalize(glm.cross(right_brow-philtrum, left_brow-philtrum))
+
+        self.__philtrum = philtrum
+
         return normal
 
 
@@ -132,7 +160,7 @@ class FaceController():
         return glm.vec3(0.0) # (leye_avg + reye_avg) / 2.0
 
 
-    def __camera_get_rot( self, normal, eyenormal, config ) -> glm.vec3:
+    def __camera_get_rot( self, normal, config ) -> glm.vec3:
         temp_strength  = config["temp_strength"]
         perm_strength  = config["perm_strength"]
         perm_threshold = config["perm_threshold"]
@@ -159,14 +187,14 @@ class FaceController():
     __delta_rot = glm.vec3(0.0)
     __last_yaw   = 0
     __last_pitch = 0
-    def __camera_apply_orientation( self, cam: idk.Camera, facenormal: glm.vec3, eyenormal: glm.vec3 ) -> None:
+    def __camera_apply_orientation( self, cam: idk.Camera, facenormal: glm.vec3 ) -> None:
         normal    = glm.normalize(facenormal)
         alpha = float(self.config["rotation"]["lerp_alpha"])
 
         self.__delta_rot = normal - self.__delta_rot
 
-        yaw   = self.__camera_get_rot(normal, eyenormal, self.yawconfig)
-        pitch = self.__camera_get_rot(normal, eyenormal, self.pitchconfig)
+        yaw   = self.__camera_get_rot(normal, self.yawconfig)
+        pitch = self.__camera_get_rot(normal, self.pitchconfig)
 
         self.__last_yaw = glm.lerp(self.__last_yaw, yaw, alpha)
         self.__last_pitch = glm.lerp(self.__last_pitch, pitch, alpha)
@@ -190,20 +218,42 @@ class FaceController():
         self.__delta_pos = position
 
 
+
     def update(self, fh: FaceRenderer, cam: idk.Camera) -> None:
         if fh.ready == False:
             return
 
-        position = self.__camera_compute_position(fh.vertices)
 
-        normal = self.__camera_compute_orientation(fh)
-        normal0 = self.__camera_compute_orientation_eyes(fh)
-        if math.fabs(normal0.x) == math.inf or math.fabs(normal0.y) == math.inf:
-            return
+        # Depth estimation
+        #---------------------------------------------------------------------------------------
+        lbrow = glm.vec2(fh.vertices[LM_LEFT_BROW][0:3])          * glm.vec2(1, defs.IMG_W/defs.IMG_H)
+        rbrow = glm.vec2(fh.vertices[LM_RIGHT_BROW][0:3])         * glm.vec2(1, defs.IMG_W/defs.IMG_H)
+        cbrow = glm.vec2(fh.vertices[LM_CENTER_BROW][0:3])        * glm.vec2(1, defs.IMG_W/defs.IMG_H)
+        philtrum_pos    = glm.vec2(fh.vertices[LM_PHILTRUM][0:3]) * glm.vec2(1, defs.IMG_W/defs.IMG_H)
+
+        # print(left_brow_pos, ", ", right_brow_pos)
+
+        real_IPD = self.measurements["IPD_mm"]
+        real_BPD = self.measurements["BPD_mm"]
+
+        f = defs.FOCAL_LENGTH
+        W = defs.IMG_W
+        H = defs.IMG_H
+
+        depth_IPD = methods.estimate_depth_mm(f, lbrow, rbrow,        real_IPD, W, H)
+        depth_BPD = methods.estimate_depth_mm(f, cbrow, philtrum_pos, real_BPD, W, H)
+        self.__depth = min([depth_IPD, depth_BPD])
+
+        # print("FACE:  %.2f,  %.2f" % (depth_IPD/1000, depth_BPD/1000))
+        #---------------------------------------------------------------------------------------
 
 
-        self.__camera_apply_orientation(cam, normal, self.eyeconfig["temp_strength"]*normal0)
-        self.__camera_apply_translation(cam, position)
+        self.__front       = self.__camera_compute_orientation(fh)
+        self.__translation = self.__camera_compute_position(fh.vertices)
+
+        self.__camera_apply_orientation(cam, self.__front)
+        self.__camera_apply_translation(cam, self.__translation)
+
 
 
     def onEvent( self, state, dtime ) -> None:

@@ -16,6 +16,8 @@ from handrenderer import HandRenderer
 from facerenderer import FaceRenderer
 from facecontroller import FaceController
 
+import methods
+
 import definitions as defs
 import sys
 
@@ -77,23 +79,31 @@ def gl_thread_fn( ren: idk.Renderer, handDetector: HandDetector, faceDetector: F
     width = 1500
     height = 1200
     ren.ren_init()
+
+    idk.loadPrimitive(idk.PRIMITIVE_UVSPHERE, "models/uvsphere.obj")
+    idk.loadPrimitive(idk.PRIMITIVE_CYLINDER, "models/cylinder.obj")
+    idk.loadPrimitive(idk.PRIMITIVE_CUBE, "models/cube.obj")
+
+    plaincolor_shader = idk.compileShaderProgram("src/shaders/", "general.vs", "plaincolor.fs")
+    idk.storeProgram("plaincolor", plaincolor_shader)
+
+
     glDisable(GL_CULL_FACE)
     glEnable(GL_MULTISAMPLE)
 
     SDL_GL_SetSwapInterval(0)
+
+
     cam = idk.Camera(80.0, width/height, 0.1, 1000.0)
+    cam.yaw(3.14159)
 
-
-    sky = idk.Model()
-    sky_mh = sky.loadOBJ(b"models/skybox.obj", b"textures/skybox.png")
+    sky_mh = idk.loadOBJ(b"models/skybox.obj", b"textures/skybox.png")
     sky_shader = idk.compileShaderProgram("src/shaders/", "general.vs", "skybox.fs")
 
-    grass = idk.Model()
-    grass_mh = grass.loadOBJ(b"models/report.obj", b"textures/report.png")
+    grass_mh = idk.loadOBJ(b"models/report.obj", b"textures/report.png")
     grass_shader = idk.compileShaderProgram("src/shaders/", "general.vs", "textured.fs")
 
-    cockpit = idk.Model()
-    cockpit_mh = cockpit.loadOBJ(b"models/cockpit.obj", b"textures/palette.png")
+    cockpit_mh = idk.loadOBJ(b"models/cockpit.obj", b"textures/palette.png")
 
     handRenderer_L = HandRenderer("config/hand.ini")
     handRenderer_R = HandRenderer("config/hand.ini")
@@ -150,6 +160,7 @@ def gl_thread_fn( ren: idk.Renderer, handDetector: HandDetector, faceDetector: F
             faceRenderer.draw(faceDetector, cam, dtime)
             faceController.update(faceRenderer, cam)
 
+
             global hgrabbing
             hgrabbing = handRenderer_L.grabbing
 
@@ -158,8 +169,46 @@ def gl_thread_fn( ren: idk.Renderer, handDetector: HandDetector, faceDetector: F
             faceRenderer.onEvent(state, dtime)
             faceController.onEvent(state, dtime)
 
-            ren.endFrame()
 
+            # Make hand follow camera
+            # ----------------------------------------------------------------------------------
+            view = cam.viewMatrix()
+            yaw = np.arctan2(view[2][0], view[0][0])
+            handRenderer_L.setRotation(glm.rotate(-yaw, glm.vec3(0, 1, 0)))
+            handRenderer_L.setTranslation(glm.translate(cam.position()))
+            # ----------------------------------------------------------------------------------
+
+
+            # Face direction
+            # ----------------------------------------------------------------------------------
+            philtrum = 0.5*glm.vec3(6.0, -1.5, -2.0) + faceController.philtrum()
+           
+            dir = glm.normalize(faceController.front())
+            dir.z *= -1.0
+
+            zpos = glm.vec3(0, 0, 1)
+
+            methods.render_vector(
+                philtrum,
+                dir,
+                color = dir,
+            )
+
+            methods.render_vector(
+                philtrum,
+                zpos,
+                color = zpos,
+            )
+
+            methods.render_vector(
+                philtrum + 0.5*zpos,
+                dir - zpos,
+                color = dir - zpos,
+            )
+            # ----------------------------------------------------------------------------------
+
+
+            ren.endFrame()
 
         dtime = (SDL_GetTicks64() - start) / 1000.0
 

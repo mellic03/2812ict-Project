@@ -92,9 +92,12 @@ class FaceRenderer:
 
         self.vertices, self.indices = geom.load_CFM("data/vertices.txt", filepath)
         self.vbackbuffer = np.empty_like(self.vertices, dtype=np.float32)
-        self.face_mh = idk.loadVerticesIndexed(self.vertices, self.indices, GL_DYNAMIC_DRAW)
 
-        self.specmap = idk.loadTexture(b"textures/specmap2.png")
+        self.__landmarks2D = [glm.vec2(0)] * self.vertices.size
+        self.__landmarks3D = []
+
+
+        self.face_mh = idk.loadVerticesIndexed(self.vertices, self.indices, GL_DYNAMIC_DRAW)
 
         self.iris_verts = np.array([0]*8*12, dtype=np.float32)
         self.iris_mh = idk.loadVertices(self.iris_verts, GL_DYNAMIC_DRAW)
@@ -103,9 +106,6 @@ class FaceRenderer:
         self.iris_l_nrm = glm.vec3(0.0)
         self.iris_r_pos = glm.vec3(0.0)
         self.iris_r_nrm = glm.vec3(0.0)
-
-        sphere = idk.Model()
-        self.sphere_mh = sphere.loadOBJ(b"models/icosphere.obj")
 
         self.__reload_shaders()
         self.__reload_ini()
@@ -118,9 +118,14 @@ class FaceRenderer:
         aspect = defs.IMG_W / defs.IMG_H
 
         self.vbackbuffer = geom.lmarks_to_np(facelms.landmark, self.vbackbuffer, aspect, glm.vec2(-0.5, -0.5))
+        self.__landmarks2D = geom.lmarks_to_glm(facelms.landmark, self.__landmarks2D, aspect, glm.vec2(-0.5, -0.5))
 
         geom.lerp_verts(self.vertices, self.vbackbuffer, self.lerp_alpha)
         geom.calculate_normals(self.vertices, self.indices)
+
+
+    def landmarks2D(self) -> list[glm.vec2]:
+        return self.__landmarks2D
 
 
     def __draw_iris(self, facelms, cam: idk.Camera, translation = glm.vec3(0.0)) -> None:
@@ -193,10 +198,9 @@ class FaceRenderer:
         rotation    = glm.rotate(self.theta, glm.vec3(0.0, 1.0, 0.0))
         trans       = glm.translate(translation)
         scale       = glm.scale(glm.vec3(2.0))
-        transform   = trans * scale * rotation
+        transform   = trans * rotation * scale
 
         glUseProgram(current_shader)
-        idk.setTexture(current_shader, 1, self.specmap, "un_specmap")
         idk.setmat4(current_shader,  "un_view",     cam.viewMatrix())
         idk.setmat4(current_shader,  "un_proj",     cam.projection())
         idk.setmat4(current_shader,  "un_model",    transform*glm.scale(glm.vec3(-1, 1, 1)))

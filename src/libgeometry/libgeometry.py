@@ -47,6 +47,19 @@ def lmarks_to_np( landmarks, output: np.ndarray, aspect, offset=glm.vec2(-0.5, -
     return output
 
 
+def lmarks_to_glm( landmarks, output: list[glm.vec2], aspect, offset=glm.vec2(-0.5, -0.5) ) -> list[glm.vec2]:
+
+    for i in range(0, len(landmarks)):
+        if i >= len(output):
+            break
+        v = landmarks[i]
+        output[i].x = (v.x + offset.x) * aspect
+        output[i].y = (v.y + offset.y)
+
+    return output
+
+
+
 def lerp_verts( verts0: np.ndarray, verts1: np.ndarray, alpha ):
     """
         Interpolate between verts0 and verts1, storing the results in verts0.

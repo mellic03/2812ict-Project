@@ -12,6 +12,7 @@ import configparser
 import libgeometry as geom
 
 import definitions as defs
+import methods
 
 
 JOINT_LISTS = [
@@ -28,15 +29,6 @@ JOINT_LISTS = [
     [0, 17, 18, 19, 20]
 ]
 
-FINGERTIPS = [ 4, 8, 12, 16, 20 ]
-
-DIST_0_5  = 65
-DIST_5_17 = 70
-DIST_0_17 = 90
-
-WRIST = 0
-INDEX_FINGER_MCP = 5
-PINKY_MCP = 17
 
 
 def is_grabbing( screen_lms ) -> bool:
@@ -76,6 +68,13 @@ class HandRenderer:
         config = configparser.ConfigParser()
         config.read(configpath)
 
+
+        self.measurements = {
+            "dist_0_5":     float(config["measurements"]["0-5-dist-mm"]),
+            "dist_0_17":    float(config["measurements"]["0-17-dist-mm"]),
+            "dist_5_17":    float(config["measurements"]["5-17-dist-mm"])
+        }
+
         self.base_color = glm.vec3([
             float(f)/255 for f in config["default color"]["base"].strip('\n').split(',')
         ])
@@ -96,11 +95,6 @@ class HandRenderer:
 
         self.hand_shader = idk.compileShaderProgram("src/shaders/", "general.vs", "hands/hands.fs")
 
-        uvsphere = idk.Model()
-        unit = idk.Model()
-        
-        self.uvsphere_h = uvsphere.loadOBJ(b"models/icosphere.obj")
-        self.unit_h = unit.loadOBJ(b"models/cylinder.obj")
 
         self.lms = np.zeros((21, 3), dtype=np.float32)
         self.wlms = np.zeros((21, 3), dtype=np.float32)
@@ -111,6 +105,18 @@ class HandRenderer:
         self.last_pos  = glm.vec3(0.0)
         self.velocity  = glm.vec3(0.0)
         self.palm_dir  = glm.vec3(0.0, 0.0, 1.0)
+
+        self.rot_mat   = glm.mat4(1.0)
+        self.trans_mat = glm.mat4(1.0)
+
+
+    
+    def setRotation(self, rot: glm.mat4 ) -> None:
+        self.rot_mat = rot
+
+
+    def setTranslation(self, trans: glm.mat4 ) -> None:
+        self.trans_mat = trans
 
 
     def is_grabbing(self, whandLms) -> bool:
@@ -145,29 +151,6 @@ class HandRenderer:
         return c0 and c1 and c2 and c3 # and c4
 
 
-    def depth_estimate(self, j1_enum, j2_enum, real):
-
-        res_x = defs.IMG_W
-        res_y = defs.IMG_H
-        f = defs.FOCAL_LENGTH
-
-        x0 = self.lms[j1_enum][0]
-        y0 = self.lms[j1_enum][1]
-        
-        x1 = self.lms[j2_enum][0]
-        y1 = self.lms[j2_enum][1]
-
-        x0p = x0 * res_x
-        x1p = x1 * res_x
-        y0p = y0 * res_y
-        y1p = y1 * res_y
-
-        pixel_dist = np.sqrt((x0p - x1p)**2 + (y0p-y1p)**2)
-        depth = (f * real) / pixel_dist
-
-        return depth
-
-
 
     # Convert landmarks to numpy array and add wrist position to all other landmarks
     def __preprocess_vertices(self, handLms, whandLms) -> None:
@@ -178,12 +161,22 @@ class HandRenderer:
 
         # Depth estimation
         # --------------------------------------------------------------------------------------
-        depth0 = self.depth_estimate(WRIST,     INDEX_FINGER_MCP, DIST_0_5)
-        depth1 = self.depth_estimate(PINKY_MCP, INDEX_FINGER_MCP, DIST_5_17)
-        depth2 = self.depth_estimate(PINKY_MCP, WRIST,            DIST_0_17)
-        depth_mm  = min([depth0, depth1, depth2])
+        p00 = glm.vec2(self.lms[0][0:4])
+        p05 = glm.vec2(self.lms[5][0:4])
+        p17 = glm.vec2(self.lms[17][0:4])
 
+
+        f = defs.FOCAL_LENGTH
+        W = defs.IMG_W
+        H = defs.IMG_H
+
+        depth0 = methods.estimate_depth_mm(f, p00, p05, self.measurements["dist_0_5"],  W, H)
+        depth1 = methods.estimate_depth_mm(f, p00, p17, self.measurements["dist_0_17"], W, H)
+        depth2 = methods.estimate_depth_mm(f, p05, p17, self.measurements["dist_5_17"], W, H)
+        depth_mm  = min([depth0, depth1, depth2])
         depth_m = depth_mm / 1000.0 # convert to metres
+
+        # print("HAND  %.2f,  %.2f,  %.2f" % (depth0, depth1, depth2))
         # --------------------------------------------------------------------------------------
 
         MIN_DEPTH = -0.1
@@ -207,19 +200,22 @@ class HandRenderer:
 
 
 
-    def __draw_joint_list(self, joint_list, cam: idk.Camera, translation: glm.vec3) -> None:
+    def __draw_joint_list(self, joint_list, cam: idk.Camera) -> None:
 
         for i in range(0, len(joint_list)-1):
 
-            pos_u = translation + glm.vec3(self.wlms[joint_list[i+0]])
-            pos_v = translation + glm.vec3(self.wlms[joint_list[i+1]])
+            pos_u = glm.vec3(self.wlms[joint_list[i+0]])
+            pos_v = glm.vec3(self.wlms[joint_list[i+1]])
 
             dist = glm.distance(pos_v, pos_u)
 
             pos_scale = glm.scale(glm.vec3(0.03, 0.03, 2*dist))
             pos_rot   = glm.inverse(glm.lookAt(pos_u, pos_v, glm.vec3(0.0, 1.0, 0.0)))
             pos_trans = glm.translate(pos_u)
-            transform = pos_trans * pos_rot * pos_scale
+            local_transform = pos_trans * pos_rot * pos_scale
+            global_transform = self.trans_mat * self.rot_mat
+            transform = global_transform * local_transform
+
 
             color = glm.lerp(self.base_color, self.tip_color, i/2)
             if self.grabbing:
@@ -228,65 +224,71 @@ class HandRenderer:
 
             # Digits
             idk.setmat4(self.hand_shader, "un_model", transform)
-            idk.drawVertices(self.unit_h)
+            idk.drawVertices(idk.getPrimitive(idk.PRIMITIVE_CYLINDER))
 
             # Knuckles
             pos_scale = glm.scale(glm.vec3(0.03))
             pos_trans = glm.translate(pos_u)
-            transform = pos_trans * pos_rot * pos_scale
+            local_transform = pos_trans * pos_rot * pos_scale
+            global_transform = self.trans_mat * self.rot_mat
+            transform = global_transform * local_transform
+
             idk.setmat4(self.hand_shader, "un_model", transform)
-            idk.drawVertices(self.uvsphere_h)
+            idk.drawVertices(idk.getPrimitive(idk.PRIMITIVE_UVSPHERE))
 
             # Fingertips
             pos_scale = glm.translate(glm.vec3(0.0, 0.0, -dist)) * glm.scale(glm.vec3(0.03))
             pos_trans = glm.translate(pos_v)
-            transform = pos_trans * pos_rot * pos_scale
+            local_transform = pos_trans * pos_rot * pos_scale
+            global_transform = self.trans_mat * self.rot_mat
+            transform = global_transform * local_transform
+
             idk.setmat4(self.hand_shader, "un_model", transform)
-            idk.drawVertices(self.uvsphere_h)
+            idk.drawVertices(idk.getPrimitive(idk.PRIMITIVE_UVSPHERE))
 
 
 
-    def __draw(self, handLms, whandLms, cam, translation=glm.vec3(0.0)) -> None:
+    def __draw(self, handLms, whandLms, cam) -> None:
 
         self.__preprocess_vertices(handLms, whandLms)
 
-        # Visualise hand orientation 
-        # --------------------------------------------------------------------------------------
-        pos_0   = glm.vec3(translation + self.wlms[0])
-        pos_5   = glm.vec3(translation + self.wlms[5])
-        pos_17  = glm.vec3(translation + self.wlms[17])
-        self.palm_dir = glm.normalize(glm.cross(pos_5 - pos_0, pos_17 - pos_0))
+        # # Visualise hand orientation 
+        # # --------------------------------------------------------------------------------------
+        # pos_0   = glm.vec3(translation + self.wlms[0])
+        # pos_5   = glm.vec3(translation + self.wlms[5])
+        # pos_17  = glm.vec3(translation + self.wlms[17])
+        # self.palm_dir = glm.normalize(glm.cross(pos_5 - pos_0, pos_17 - pos_0))
     
-        pos_trans = glm.translate(pos_0)
-        pos_rot   = glm.inverse(glm.lookAt(pos_0, pos_0+self.palm_dir, glm.vec3(0.0, 1.0, 0.0)))
-        pos_scale = glm.scale(glm.vec3(0.03, 0.03, 2))
-        transform = pos_trans * pos_rot * pos_scale
+        # pos_trans = glm.translate(pos_0)
+        # pos_rot   = glm.inverse(glm.lookAt(pos_0, pos_0+self.palm_dir, glm.vec3(0.0, 1.0, 0.0)))
+        # pos_scale = glm.scale(glm.vec3(0.03, 0.03, 2))
+        # transform = pos_trans * pos_rot * pos_scale
 
-        idk.setvec3(self.hand_shader, "un_color", glm.vec3(0.0, 0.0, 1.0))
-        idk.setmat4(self.hand_shader, "un_model", transform)
-        idk.drawVertices(self.unit_h)
-        # --------------------------------------------------------------------------------------
+        # idk.setvec3(self.hand_shader, "un_color", glm.vec3(0.0, 0.0, 1.0))
+        # idk.setmat4(self.hand_shader, "un_model", transform)
+        # idk.drawVertices(idk.getPrimitive(idk.PRIMITIVE_CYLINDER))
+        # # --------------------------------------------------------------------------------------
 
 
-        # Visualise finger direction 
-        # --------------------------------------------------------------------------------------
-        pos_5 = glm.vec3(translation + self.wlms[5])
-        pos_8 = glm.vec3(translation + self.wlms[8])
-        finger_dir = glm.normalize(pos_8 - pos_5)
+        # # Visualise finger direction 
+        # # --------------------------------------------------------------------------------------
+        # pos_5 = glm.vec3(translation + self.wlms[5])
+        # pos_8 = glm.vec3(translation + self.wlms[8])
+        # finger_dir = glm.normalize(pos_8 - pos_5)
 
-        pos_trans = glm.translate(pos_8)
-        pos_rot   = glm.inverse(glm.lookAt(pos_8, pos_8+finger_dir, glm.vec3(0.0, 1.0, 0.0)))
-        pos_scale = glm.scale(glm.vec3(0.03, 0.03, 2))
-        transform = pos_trans * pos_rot * pos_scale
+        # pos_trans = glm.translate(pos_8)
+        # pos_rot   = glm.inverse(glm.lookAt(pos_8, pos_8+finger_dir, glm.vec3(0.0, 1.0, 0.0)))
+        # pos_scale = glm.scale(glm.vec3(0.03, 0.03, 2))
+        # transform = pos_trans * pos_rot * pos_scale
 
-        idk.setvec3(self.hand_shader, "un_color", glm.vec3(1.0, 0.0, 0.0))
-        idk.setmat4(self.hand_shader, "un_model", transform)
-        idk.drawVertices(self.unit_h)
-        # --------------------------------------------------------------------------------------
+        # idk.setvec3(self.hand_shader, "un_color", glm.vec3(1.0, 0.0, 0.0))
+        # idk.setmat4(self.hand_shader, "un_model", transform)
+        # idk.drawVertices(idk.getPrimitive(idk.PRIMITIVE_CYLINDER))
+        # # --------------------------------------------------------------------------------------
 
 
         for joint_list in JOINT_LISTS:
-            self.__draw_joint_list(joint_list, cam, translation)
+            self.__draw_joint_list(joint_list, cam)
 
 
 
@@ -320,7 +322,8 @@ class HandRenderer:
         if results and results.multi_hand_landmarks:
             handLms = results.multi_hand_landmarks[handedness_idx]
             whandLms = results.multi_hand_world_landmarks[handedness_idx]
-            self.__draw(handLms, whandLms, cam, glm.vec3(0.0,  cam.position().y, 0.0))
+
+            self.__draw(handLms, whandLms, cam)
             # self.__draw(handLms, whandLms, cam, glm.vec3(6.0,  0.0, -2.0))
             # self.__draw(handLms, whandLms, cam, glm.vec3(6.0, -1.5, -2.0))
 

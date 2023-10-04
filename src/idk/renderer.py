@@ -14,6 +14,18 @@ SIZEOF_VERTEX = VERTEX_NUM_ELEMENTS*SIZEOF_FLOAT
 
 
 
+idk__programs = { }
+
+def storeProgram( name: str, shader_id: GLuint ) -> None:
+    idk__programs[name] = shader_id
+
+
+def getProgram( name ) -> GLuint:
+    return idk__programs[name]
+
+
+
+
 class ModelHandle:
     def __init__(self, VAO, VBO, num_elements, glTextureID) -> None:
         self.VAO = VAO
@@ -22,137 +34,135 @@ class ModelHandle:
         self.glTextureID  = glTextureID
 
 
-class Model:
-    glVertices: list[float] = [] # x y z x y z u v
-
-    def __init__(self) -> None:
-        pass
+def __obj_extractFaceIndices(abc: str):
+    arr = abc.split("/")
+    return [int(arr[0])-1, int(arr[1])-1, int(arr[2])-1]
 
 
-    def __obj_extractFaceIndices(self, abc: str):
-        arr = abc.split("/")
-        return [int(arr[0])-1, int(arr[1])-1, int(arr[2])-1]
+def __load_obj(filepath):
+    vertices = []
+    fh = open(filepath, "r")
+    positions = []
+    normals   = []
+    uvs       = []
+
+    for line in fh:
+        tokens = line.strip("\n").split(" ")
+
+        if tokens[0] == "v":
+            positions.append([
+                float(tokens[1]),
+                float(tokens[2]),
+                float(tokens[3])
+            ])
+
+        elif tokens[0] == "vn":
+            normals.append([
+                float(tokens[1]),
+                float(tokens[2]),
+                float(tokens[3])
+            ])
+
+        elif tokens[0] == "vt":
+            uvs.append([
+                float(tokens[1]),
+                1.0-float(tokens[2])
+            ])
+
+        elif tokens[0] == "f":
+            i1 = __obj_extractFaceIndices(tokens[1])
+            i2 = __obj_extractFaceIndices(tokens[2])
+            i3 = __obj_extractFaceIndices(tokens[3])
+
+            vertices += positions[i1[0]]
+            vertices += normals  [i1[2]]
+            vertices += uvs      [i1[1]]
+
+            vertices += positions[i2[0]]
+            vertices += normals  [i2[2]]
+            vertices += uvs      [i2[1]]
+
+            vertices += positions[i3[0]]
+            vertices += normals  [i3[2]]
+            vertices += uvs      [i3[1]]
+
+    return vertices
 
 
-    def __load_obj(self, filepath):
-        self.glVertices = []
-        fh = open(filepath, "r")
-        positions = []
-        normals   = []
-        uvs       = []
 
-        for line in fh:
-            tokens = line.strip("\n").split(" ")
+def __loadVertices(vertices: list[float], usage=GL_STATIC_DRAW):
+    NPVERTS = np.array(vertices, dtype=np.float32)
+    
+    VAO = glGenVertexArrays(1)
+    VBO = glGenBuffers(1)
 
-            if tokens[0] == "v":
-                positions.append([
-                    float(tokens[1]),
-                    float(tokens[2]),
-                    float(tokens[3])
-                ])
+    glBindVertexArray(VAO)
+    glBindBuffer(GL_ARRAY_BUFFER, VBO)
+    glBufferData(GL_ARRAY_BUFFER, NPVERTS.nbytes, NPVERTS, usage)    
 
-            elif tokens[0] == "vn":
-                normals.append([
-                    float(tokens[1]),
-                    float(tokens[2]),
-                    float(tokens[3])
-                ])
+    # Position attribute
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8*SIZEOF_FLOAT, ctypes.c_void_p(0*SIZEOF_FLOAT))
+    glEnableVertexAttribArray(0)
 
-            elif tokens[0] == "vt":
-                uvs.append([
-                    float(tokens[1]),
-                    1.0-float(tokens[2])
-                ])
+    # Normal attribute
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8*SIZEOF_FLOAT, ctypes.c_void_p(3*SIZEOF_FLOAT))
+    glEnableVertexAttribArray(1)
 
-            elif tokens[0] == "f":
-                i1 = self.__obj_extractFaceIndices(tokens[1])
-                i2 = self.__obj_extractFaceIndices(tokens[2])
-                i3 = self.__obj_extractFaceIndices(tokens[3])
+    # Texture coordinate attribute
+    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8*SIZEOF_FLOAT, ctypes.c_void_p(6*SIZEOF_FLOAT))
+    glEnableVertexAttribArray(2)
 
-                self.glVertices += positions[i1[0]]
-                self.glVertices += normals  [i1[2]]
-                self.glVertices += uvs      [i1[1]]
+    glBindBuffer(GL_ARRAY_BUFFER, 0)
+    glBindVertexArray(0)
 
-                self.glVertices += positions[i2[0]]
-                self.glVertices += normals  [i2[2]]
-                self.glVertices += uvs      [i2[1]]
-
-                self.glVertices += positions[i3[0]]
-                self.glVertices += normals  [i3[2]]
-                self.glVertices += uvs      [i3[1]]
+    return (VAO, VBO)
 
 
-    def __loadVertices(self, vertices: list[float], usage=GL_STATIC_DRAW):
-        NPVERTS = np.array(vertices, dtype=np.float32)
-        
-        VAO = glGenVertexArrays(1)
-        VBO = glGenBuffers(1)
 
-        glBindVertexArray(VAO)
-        glBindBuffer(GL_ARRAY_BUFFER, VBO)
-        glBufferData(GL_ARRAY_BUFFER, NPVERTS.nbytes, NPVERTS, usage)    
-
-        # Position attribute
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8*SIZEOF_FLOAT, ctypes.c_void_p(0*SIZEOF_FLOAT))
-        glEnableVertexAttribArray(0)
-
-        # Normal attribute
-        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8*SIZEOF_FLOAT, ctypes.c_void_p(3*SIZEOF_FLOAT))
-        glEnableVertexAttribArray(1)
-
-        # Texture coordinate attribute
-        glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8*SIZEOF_FLOAT, ctypes.c_void_p(6*SIZEOF_FLOAT))
-        glEnableVertexAttribArray(2)
-
-        glBindBuffer(GL_ARRAY_BUFFER, 0)
-        glBindVertexArray(0)
-
-        return (VAO, VBO)
+def loadVertices(vertices: list[float], usage=GL_STATIC_DRAW):
+    VAO, VBO = __loadVertices(vertices, usage)
+    return ModelHandle(
+        VAO, VBO,
+        len(vertices) // VERTEX_NUM_ELEMENTS,
+        0
+    )
 
 
-    def loadVertices(self, vertices: list[float], usage=GL_STATIC_DRAW):
-        VAO, VBO = self.__loadVertices(vertices, usage)
-        return ModelHandle(
-            VAO, VBO,
-            len(vertices) // VERTEX_NUM_ELEMENTS,
-            0
-        )
+# Load an image texture from file and return an identifying GLuint ID
+def __loadTexture(filepath):
+    img: SDL_Surface = IMG_Load(filepath)
+    u32_img = ctypes.cast(img[0].pixels, ctypes.POINTER(ctypes.c_uint32))
+
+    texture_id = glGenTextures(1)        
+    glBindTexture(GL_TEXTURE_2D, texture_id)
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 1)
+
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, img[0].w, img[0].h, 0, GL_RGBA, GL_UNSIGNED_BYTE, u32_img)
+
+    glGenerateMipmap(GL_TEXTURE_2D)
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST)
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST)
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT)
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT)
+    glBindTexture(GL_TEXTURE_2D, 0)
+
+    return texture_id
 
 
-    # Load an image texture from file and return an identifying GLuint ID
-    def __loadTexture(self, filepath):
-        img: SDL_Surface = IMG_Load(filepath)
-        u32_img = ctypes.cast(img[0].pixels, ctypes.POINTER(ctypes.c_uint32))
 
-        texture_id = glGenTextures(1)        
-        glBindTexture(GL_TEXTURE_2D, texture_id)
-        glPixelStorei(GL_UNPACK_ALIGNMENT, 1)
+def loadOBJ(obj, texture=None, usage=GL_STATIC_DRAW) -> ModelHandle:
+    vertices = __load_obj(obj)
+    VAO, VBO = __loadVertices(vertices, usage)
 
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, img[0].w, img[0].h, 0, GL_RGBA, GL_UNSIGNED_BYTE, u32_img)
+    glTextureID = 0
+    if texture != None:
+        glTextureID = __loadTexture(texture)
 
-        glGenerateMipmap(GL_TEXTURE_2D)
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST)
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST)
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT)
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT)
-        glBindTexture(GL_TEXTURE_2D, 0)
-
-        return texture_id
-
-
-    def loadOBJ(self, obj, texture=None, usage=GL_STATIC_DRAW) -> ModelHandle:
-        self.__load_obj(obj)
-        VAO, VBO = self.__loadVertices(self.glVertices, usage)
-
-        glTextureID = 0
-        if texture != None:
-            glTextureID = self.__loadTexture(texture)
-
-        return ModelHandle(
-            VAO, VBO,
-            len(self.glVertices) // VERTEX_NUM_ELEMENTS,
-            glTextureID
-        )
+    return ModelHandle(
+        VAO, VBO,
+        len(vertices) // VERTEX_NUM_ELEMENTS,
+        glTextureID
+    )
 
 
 
@@ -220,6 +230,13 @@ class Renderer:
                     self.__height = event.window.data2
 
                     cam.setProjection(cam.fov(), self.__width, self.__height)
+
+
+        for key in idk__programs:
+            shader_id = idk__programs[key]
+            glUseProgram(shader_id)
+            setmat4(shader_id, "un_proj", cam.projection())
+            setmat4(shader_id, "un_view", cam.viewMatrix())
 
 
         SDL_PumpEvents()
@@ -423,3 +440,4 @@ def drawVerticesIndexedTextured(mh: ModelHandle, shader_id, gl_mode=GL_TRIANGLES
     setint(shader_id, "un_texture", 0)
     glDrawElements(gl_mode, mh.num_elements, GL_UNSIGNED_INT, ctypes.c_void_p(0))
     glBindVertexArray(0)
+
