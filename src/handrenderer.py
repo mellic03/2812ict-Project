@@ -95,6 +95,7 @@ class HandRenderer:
 
         self.hand_shader = idk.compileShaderProgram("src/shaders/", "general.vs", "hands/hands.fs")
 
+        self.__ready = False
 
         self.lms = np.zeros((21, 3), dtype=np.float32)
         self.wlms = np.zeros((21, 3), dtype=np.float32)
@@ -108,6 +109,7 @@ class HandRenderer:
 
         self.rot_mat   = glm.mat4(1.0)
         self.trans_mat = glm.mat4(1.0)
+        self.__depth   = 0.0
 
 
     
@@ -117,6 +119,34 @@ class HandRenderer:
 
     def setTranslation(self, trans: glm.mat4 ) -> None:
         self.trans_mat = trans
+
+
+    def setDepth(self, depth) -> None:
+        self.__depth = depth
+
+
+    def calculateDepth(self) -> float:
+
+        if self.__ready == False:
+            return 1
+
+        p00 = glm.vec2(self.lms[0][0:3])
+        p05 = glm.vec2(self.lms[5][0:3])
+        p17 = glm.vec2(self.lms[17][0:3])
+
+        f = defs.FOCAL_LENGTH
+        W = defs.IMG_W
+        H = defs.IMG_H
+
+        depth0 = methods.estimate_depth_mm(f, p00, p05, self.measurements["dist_0_5"],  W, H)
+        depth1 = methods.estimate_depth_mm(f, p00, p17, self.measurements["dist_0_17"], W, H)
+        depth2 = methods.estimate_depth_mm(f, p05, p17, self.measurements["dist_5_17"], W, H)
+        # print("HAND  %.2f,  %.2f,  %.2f" % (depth0, depth1, depth2))
+
+        depth_mm = min([depth0, depth1, depth2])
+        depth_m  = depth_mm / 1000.0
+
+        return depth_m
 
 
     def is_grabbing(self, whandLms) -> bool:
@@ -151,7 +181,6 @@ class HandRenderer:
         return c0 and c1 and c2 and c3 # and c4
 
 
-
     # Convert landmarks to numpy array and add wrist position to all other landmarks
     def __preprocess_vertices(self, handLms, whandLms) -> None:
 
@@ -159,35 +188,12 @@ class HandRenderer:
         self.wlms = geom.lmarks_to_np(whandLms.landmark, self.wlms, 1, glm.vec2(0.0))
 
 
-        # Depth estimation
-        # --------------------------------------------------------------------------------------
-        p00 = glm.vec2(self.lms[0][0:4])
-        p05 = glm.vec2(self.lms[5][0:4])
-        p17 = glm.vec2(self.lms[17][0:4])
-
-
-        f = defs.FOCAL_LENGTH
-        W = defs.IMG_W
-        H = defs.IMG_H
-
-        depth0 = methods.estimate_depth_mm(f, p00, p05, self.measurements["dist_0_5"],  W, H)
-        depth1 = methods.estimate_depth_mm(f, p00, p17, self.measurements["dist_0_17"], W, H)
-        depth2 = methods.estimate_depth_mm(f, p05, p17, self.measurements["dist_5_17"], W, H)
-        depth_mm  = min([depth0, depth1, depth2])
-        depth_m = depth_mm / 1000.0 # convert to metres
-
-        # print("HAND  %.2f,  %.2f,  %.2f" % (depth0, depth1, depth2))
-        # --------------------------------------------------------------------------------------
-
-        MIN_DEPTH = -0.1
-        MAX_DEPTH = -1.1
-
         XYSCALE = 3.0
 
         self.center = glm.vec3(
             glm.lerp(XYSCALE * self.lms[0][0], self.center[0], 0.8),
             glm.lerp(XYSCALE * self.lms[0][1], self.center[1], 0.8),
-            glm.lerp(glm.clamp(MAX_DEPTH + depth_m, MAX_DEPTH, MIN_DEPTH), self.center[2], 0.8)
+            glm.lerp(self.__depth, self.center[2], 0.8)
         )
 
         # Add center position to all other positions
@@ -320,6 +326,8 @@ class HandRenderer:
         results = handDetector.m_results
 
         if results and results.multi_hand_landmarks:
+            self.__ready = True
+            
             handLms = results.multi_hand_landmarks[handedness_idx]
             whandLms = results.multi_hand_world_landmarks[handedness_idx]
 

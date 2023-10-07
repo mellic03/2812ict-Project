@@ -4,8 +4,8 @@ import sdl2.ext
 import ctypes
 from OpenGL.GL import *
 from OpenGL.GL import shaders
+import glm
 import numpy as np
-import glm as glm
 
 
 class Transform:

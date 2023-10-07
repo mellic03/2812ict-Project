@@ -89,7 +89,7 @@ class FaceController():
         return self.__translation
     
 
-    def depth(self) -> float:
+    def getDepth(self) -> float:
         return self.__depth
 
 
@@ -226,10 +226,10 @@ class FaceController():
 
         # Depth estimation
         #---------------------------------------------------------------------------------------
-        lbrow = glm.vec2(fh.vertices[LM_LEFT_BROW][0:3])          * glm.vec2(1, defs.IMG_W/defs.IMG_H)
-        rbrow = glm.vec2(fh.vertices[LM_RIGHT_BROW][0:3])         * glm.vec2(1, defs.IMG_W/defs.IMG_H)
-        cbrow = glm.vec2(fh.vertices[LM_CENTER_BROW][0:3])        * glm.vec2(1, defs.IMG_W/defs.IMG_H)
-        philtrum_pos    = glm.vec2(fh.vertices[LM_PHILTRUM][0:3]) * glm.vec2(1, defs.IMG_W/defs.IMG_H)
+        lbrow = glm.vec2(fh.vertices[LM_LEFT_BROW][0:3])
+        rbrow = glm.vec2(fh.vertices[LM_RIGHT_BROW][0:3])
+        cbrow = glm.vec2(fh.vertices[LM_CENTER_BROW][0:3])
+        philtrum_pos    = glm.vec2(fh.vertices[LM_PHILTRUM][0:3])
 
         # print(left_brow_pos, ", ", right_brow_pos)
 
@@ -242,7 +242,7 @@ class FaceController():
 
         depth_IPD = methods.estimate_depth_mm(f, lbrow, rbrow,        real_IPD, W, H)
         depth_BPD = methods.estimate_depth_mm(f, cbrow, philtrum_pos, real_BPD, W, H)
-        self.__depth = min([depth_IPD, depth_BPD])
+        self.__depth = min([depth_IPD, depth_BPD]) / 1000.0
 
         # print("FACE:  %.2f,  %.2f" % (depth_IPD/1000, depth_BPD/1000))
         #---------------------------------------------------------------------------------------

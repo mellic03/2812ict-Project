@@ -179,10 +179,34 @@ def gl_thread_fn( ren: idk.Renderer, handDetector: HandDetector, faceDetector: F
             # ----------------------------------------------------------------------------------
 
 
+            # Make dist(model_hand, 3D_camera) == dist(real_hand, real_camera)
+            # ----------------------------------------------------------------------------------
+            face_depth = faceController.getDepth()
+            hand_depth = 0.58 * handRenderer_L.calculateDepth()
+
+            # print("%.2f,  %.2f,  %.2f" % (face_depth, hand_depth, face_depth-hand_depth))
+
+            handRenderer_L.setDepth(2 * -(face_depth - hand_depth))
+
+            cpos = handRenderer_L.center
+
+            vec_a = glm.vec3(0, -1, 0)
+            vec_b = glm.vec3(glm.inverse(cam.viewMatrix()) * glm.vec4(cpos, 1.0))
+
+            methods.render_vector(
+                vec_a,
+                vec_b - vec_a,
+            )
+
+
+            # ----------------------------------------------------------------------------------
+
+
+
             # Face direction
             # ----------------------------------------------------------------------------------
             philtrum = 0.5*glm.vec3(6.0, -1.5, -2.0) + faceController.philtrum()
-           
+
             dir = glm.normalize(faceController.front())
             dir.z *= -1.0
 
