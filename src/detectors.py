@@ -18,7 +18,16 @@ class FaceDetector:
         self.m_results = self.mpFace.process(imgRGB)
 
 
-    def draw(self, img) -> None:
+    def __draw_debug(self, img, real_depth, real_a):
+        
+        return
+
+
+    def draw(self, img, debug=None) -> None:
+
+        if debug == True:
+            return img
+
         if self.m_results and self.m_results.multi_face_landmarks:
             for handLms in self.m_results.multi_face_landmarks:
                 self.mpDraw.draw_landmarks(
@@ -39,7 +48,6 @@ class FaceDetector:
                 .get_default_face_mesh_tesselation_style()
             )
         return img
-
 
     def results(self):
         return self.m_results
@@ -99,7 +107,6 @@ class HandDetector:
 
 
     def draw(self, img, debug=False, real_depth=None, real_0_5_mm=None) -> None:
-        self.img = img
 
         if debug == True:
             self.__draw_debug(img, real_depth, real_0_5_mm)

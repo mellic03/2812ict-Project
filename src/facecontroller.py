@@ -219,17 +219,17 @@ class FaceController():
 
 
 
-    def update(self, fh: FaceRenderer, cam: idk.Camera) -> None:
-        if fh.ready == False:
-            return
+    def update(self, fr: FaceRenderer, cam: idk.Camera) -> None:
 
+        if fr.ready == False:
+            return
 
         # Depth estimation
         #---------------------------------------------------------------------------------------
-        lbrow = glm.vec2(fh.vertices[LM_LEFT_BROW][0:3])
-        rbrow = glm.vec2(fh.vertices[LM_RIGHT_BROW][0:3])
-        cbrow = glm.vec2(fh.vertices[LM_CENTER_BROW][0:3])
-        philtrum_pos    = glm.vec2(fh.vertices[LM_PHILTRUM][0:3])
+        lbrow = glm.vec2(fr.vertices[LM_LEFT_BROW][0:3])
+        rbrow = glm.vec2(fr.vertices[LM_RIGHT_BROW][0:3])
+        cbrow = glm.vec2(fr.vertices[LM_CENTER_BROW][0:3])
+        philtrum_pos    = glm.vec2(fr.vertices[LM_PHILTRUM][0:3])
 
         # print(left_brow_pos, ", ", right_brow_pos)
 
@@ -248,8 +248,8 @@ class FaceController():
         #---------------------------------------------------------------------------------------
 
 
-        self.__front       = self.__camera_compute_orientation(fh)
-        self.__translation = self.__camera_compute_position(fh.vertices)
+        self.__front       = self.__camera_compute_orientation(fr)
+        self.__translation = self.__camera_compute_position(fr.vertices)
 
         self.__camera_apply_orientation(cam, self.__front)
         self.__camera_apply_translation(cam, self.__translation)

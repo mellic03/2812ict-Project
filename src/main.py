@@ -13,6 +13,7 @@ import configparser
 
 from detectors import *
 from handrenderer import HandRenderer
+from handcontroller import HandController
 from facerenderer import FaceRenderer
 from facecontroller import FaceController
 
@@ -45,7 +46,7 @@ hgrabbing = False
 
 
 def cv_thread_fn( ren: idk.Renderer, handDetector: HandDetector, faceDetector: FaceDetector ):
-    cap = cv.VideoCapture(1)
+    cap = cv.VideoCapture(0)
     # cap.set(cv.CAP_PROP_FRAME_WIDTH,  1280)
     # cap.set(cv.CAP_PROP_FRAME_HEIGHT, 720)
 
@@ -107,6 +108,9 @@ def gl_thread_fn( ren: idk.Renderer, handDetector: HandDetector, faceDetector: F
 
     handRenderer_L = HandRenderer("config/hand.ini")
     handRenderer_R = HandRenderer("config/hand.ini")
+    handController_L = HandController()
+    handController_R = HandController()
+
     faceRenderer   = FaceRenderer("config/fRenderer.ini")
     faceController = FaceController("config/fController.ini")
 
@@ -157,12 +161,15 @@ def gl_thread_fn( ren: idk.Renderer, handDetector: HandDetector, faceDetector: F
 
             handRenderer_L.draw(handDetector, cam, "Left")
             handRenderer_R.draw(handDetector, cam, "Right")
+        
+            handController_L.update(handRenderer_L, cam)
+            global hgrabbing
+            hgrabbing = handController_L.grabbing
+
+
             faceRenderer.draw(faceDetector, cam, dtime)
             faceController.update(faceRenderer, cam)
 
-
-            global hgrabbing
-            hgrabbing = handRenderer_L.grabbing
 
             state = sdl2.SDL_GetKeyboardState(None)
             cam.onEvent(state, dtime)
@@ -174,33 +181,27 @@ def gl_thread_fn( ren: idk.Renderer, handDetector: HandDetector, faceDetector: F
             # ----------------------------------------------------------------------------------
             view = cam.viewMatrix()
             yaw = np.arctan2(view[2][0], view[0][0])
-            handRenderer_L.setRotation(glm.rotate(-yaw, glm.vec3(0, 1, 0)))
-            handRenderer_L.setTranslation(glm.translate(cam.position()))
+
+            invLA = glm.inverse(methods.hand_compute_orientation(handRenderer_L.wlms))
+            rotation = invLA
+
+            handRenderer_L.setRotation(rotation)
+            handRenderer_L.setTranslation(glm.translate(glm.vec3(0)))
             # ----------------------------------------------------------------------------------
 
 
             # Make dist(model_hand, 3D_camera) == dist(real_hand, real_camera)
             # ----------------------------------------------------------------------------------
-            face_depth = faceController.getDepth()
-            hand_depth = 0.58 * handRenderer_L.calculateDepth()
-
-            # print("%.2f,  %.2f,  %.2f" % (face_depth, hand_depth, face_depth-hand_depth))
-
-            handRenderer_L.setDepth(2 * -(face_depth - hand_depth))
-
-            cpos = handRenderer_L.center
-
-            vec_a = glm.vec3(0, -1, 0)
-            vec_b = glm.vec3(glm.inverse(cam.viewMatrix()) * glm.vec4(cpos, 1.0))
-
-            methods.render_vector(
-                vec_a,
-                vec_b - vec_a,
-            )
-
-
+            # face_depth = faceController.getDepth()
+            # hand_depth = 0.58 * handRenderer_L.calculateDepth()
+            # handRenderer_L.depthCorrection(2 * -(face_depth - hand_depth))
             # ----------------------------------------------------------------------------------
 
+
+            # get hand position relative to face
+            # ----------------------------------------------------------------------------------
+            
+            # ----------------------------------------------------------------------------------
 
 
             # Face direction

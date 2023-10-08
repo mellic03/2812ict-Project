@@ -32,8 +32,22 @@ def img_undistort( img: np.ndarray, cam_mat: np.ndarray, dst_coef: np.ndarray ) 
 # ---------------------------------------------------------------------------------------------- 
 
 
-# Monocular depth estimation
-# ----------------------------------------------------------------------------------------------
+def pixel_dist_to_real_dist( d, p, k ) -> float:
+    """
+    Given a known real-world distance `d` and it's corresponding distance in pixels `p`,
+    estimate the real-world distance corresponding to the pixel distance `k`.
+    This assumes both objects are the same distance from the camera.
+    """
+    return (k / p) * d
+
+
+def pixel_dist_to_real_depth( pixel_focal_length, pixel_dist, real_dist ) -> float:
+    """Conver"""
+
+    return (pixel_focal_length * real_dist) / pixel_dist
+
+
+
 def estimate_depth_mm( pixel_focal_length, p1, p2, real_distance, W=1, H=1 ) -> float:
     """
         Estimate the distance to an object by comparing a pixel distance (p1, p2)
@@ -55,9 +69,11 @@ def estimate_depth_mm( pixel_focal_length, p1, p2, real_distance, W=1, H=1 ) -> 
     return depth
 
 
+
 def estimate_face_direction(leye, reye, philtrum) -> glm.vec3:
     direction = glm.normalize(glm.cross(philtrum - reye, philtrum - leye))
     return direction
+
 
 
 def joint_matrix( p1: glm.vec3, p2: glm.vec3 ) -> glm.mat4:
@@ -66,25 +82,43 @@ def joint_matrix( p1: glm.vec3, p2: glm.vec3 ) -> glm.mat4:
 
     T: glm.mat4 = glm.translate(p1)
     R: glm.mat4 = glm.inverse(glm.lookAt(p1, p2, glm.vec3(0, 1, 0)))
-    S: glm.mat4 = glm.scale(glm.vec3(0.03, 0.03, dist))
+    S: glm.mat4 = glm.scale(glm.vec3(0.03, 0.03, 2*dist))
 
     return T * R * S
 
 
-def derotate_hand( landmarks: list[glm.vec3] ) -> list[glm.vec3]:
 
-    p0 = landmarks[0]
-    p5 = landmarks[5]
-    p17 = landmarks[17]
+def hand_compute_orientation( landmarks3D: np.ndarray ) -> glm.mat4:
 
-    front = glm.normalize(glm.cross(p0 - p5, p0 - p17))
+    lms = landmarks3D
 
-    rot =  glm.mat4(1.0)
+    p0  = glm.vec3(lms[0])
+    p5  = glm.vec3(lms[5])
+    p17 = glm.vec3(lms[17])
+
+    palm_dir = glm.normalize(glm.cross(p17 - p0, p5 - p0))
+    side_dir = glm.normalize(p17 - p5)
+    up_dir   = glm.normalize(glm.cross(side_dir, palm_dir))
+
+    rotation = glm.mat4(1.0)
+    rotation[0] = glm.vec4(side_dir,  0)
+    rotation[1] = glm.vec4(up_dir,    0)
+    rotation[2] = glm.vec4(-palm_dir, 0)
+
+    return rotation
+
+
+def derotate_hand( landmarks3D: np.ndarray ) -> list[glm.vec3]:
+
+    p0  = landmarks3D[0]
+    p5  = landmarks3D[5]
+    p17 = landmarks3D[17]
+
+    rotation = glm.inverse(hand_compute_orientation(landmarks3D))
 
     derotated = [ ]
-
-    for point in landmarks:
-        derotated.append( glm.vec3(rot * glm.vec4(point)) )
+    for point in landmarks3D:
+        derotated.append( glm.vec3(rotation * glm.vec4(point, 1.0)) )
 
     return derotated
 
@@ -92,10 +126,57 @@ def derotate_hand( landmarks: list[glm.vec3] ) -> list[glm.vec3]:
 
 def hand_is_grabbing( landmarks3D: np.ndarray ) -> bool:
 
-    # Call derotate_hand(), creating a list of de-rotated 3D hand landmarks.
-    # Then, evaluate thresholds.
+    lms = derotate_hand(landmarks3D)
 
-    return False
+    x4  = math.fabs(lms[ 4].x)
+    x5  = math.fabs(lms[ 5].x)
+    x17 = math.fabs(lms[17].x)
+
+    xmax = max(x5, x17)
+    xmin = min(x5, x17)
+
+    y0  = lms[ 0].y
+    y5  = lms[ 5].y
+    y8  = lms[ 8].y
+    y9  = lms[ 9].y
+    y12 = lms[12].y
+    y13 = lms[13].y
+    y16 = lms[16].y
+    y17 = lms[17].y
+    y20 = lms[20].y
+
+    # Add ymin to all y values making all values positive.
+    # math.fabs() alone will not work: [0.5, 0.3, -0.4] --> [0.5, 0.4, 0.3]
+    ymin = min([y0, y5, y8, y9, y12, y13, y16, y17, y20])
+
+    y0  += math.fabs(ymin)
+    y5  += math.fabs(ymin)
+    y8  += math.fabs(ymin)
+    y9  += math.fabs(ymin)
+    y12 += math.fabs(ymin)
+    y13 += math.fabs(ymin)
+    y16 += math.fabs(ymin)
+    y17 += math.fabs(ymin)
+    y20 += math.fabs(ymin)
+
+
+    c0 = y0 > y8  > y5
+    c1 = y0 > y12 > y9
+    c2 = y0 > y16 > y13
+    c3 = y0 > y20 > y17
+    c4 = xmin < x4 < xmax
+
+    return c0 and c1 and c2 and c3
+
+
+
+
+def compute_finger_states( landmarks3D: np.ndarray ) -> list[bool]:
+
+    states = [ False ] * 5
+
+
+    return
 
 
 
