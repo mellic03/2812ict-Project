@@ -21,9 +21,6 @@ def pixel_dist_to_real_depth( pixel_focal_length, pixel_dist, real_dist ) -> flo
     return (pixel_focal_length * real_dist) / pixel_dist
 
 
-def img_undistort( img: np.ndarray, cam_mat: np.ndarray, dst_coef: np.ndarray ) -> np.ndarray:
-    return cv.undistort(img, cam_mat, dst_coef)
-
 
 # Attempts at improving hand detection.
 # ---------------------------------------------------------------------------------------------- 
