@@ -405,7 +405,7 @@ def main():
         if cv.waitKey(1) == 27:
             break
 
-    hfRatio.writeINI("test.ini")
+    hfRatio.writeINI("config/measurements.ini")
 
 
 main()
