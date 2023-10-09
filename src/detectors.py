@@ -54,8 +54,6 @@ class FaceDetector:
 
 
 
-
-
 class HandDetector:
     def __init__(self) -> None:
         self.hands = mp.solutions.hands

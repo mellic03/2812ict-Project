@@ -173,7 +173,7 @@ def hand_is_grabbing( landmarks3D: np.ndarray ) -> bool:
     c3 = y0 > y20 > y17
     c4 = xmin < x4 < xmax
 
-    return c0 and c1 and c2 and c3
+    return c0 and c1 and c2 and c3 # and c4
 # ---------------------------------------------------------------------------------------------- 
 
 
