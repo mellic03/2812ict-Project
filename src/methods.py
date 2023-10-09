@@ -6,21 +6,6 @@ import numpy as np
 import cv2 as cv
 
 
-def pixel_dist_to_real_dist( d, p, k ) -> float:
-    """
-    Given a known real-world distance `d` and it's corresponding distance in pixels `p`,
-    estimate the real-world distance corresponding to the pixel distance `k`.
-    This assumes both objects are the same distance from the camera.
-    """
-    return (k / p) * d
-
-
-def pixel_dist_to_real_depth( pixel_focal_length, pixel_dist, real_dist ) -> float:
-    """Convert"""
-
-    return (pixel_focal_length * real_dist) / pixel_dist
-
-
 
 # Attempts at improving hand detection.
 # ---------------------------------------------------------------------------------------------- 
@@ -40,6 +25,24 @@ def pixel_dist_to_real_depth( pixel_focal_length, pixel_dist, real_dist ) -> flo
 
 #     return img
 # ---------------------------------------------------------------------------------------------- 
+
+
+# Methods related to monocular depth estimation
+# ---------------------------------------------------------------------------------------------- 
+def pixel_dist_to_real_dist( d, p, k ) -> float:
+    """
+    Given a known real-world distance `d` and it's corresponding distance in pixels `p`,
+    estimate the real-world distance corresponding to the pixel distance `k`.
+    This assumes both objects are the same distance from the camera.
+    """
+    return (k / p) * d
+
+
+def pixel_dist_to_real_depth( pixel_focal_length, pixel_dist, real_dist ) -> float:
+    """Convert"""
+
+    return (pixel_focal_length * real_dist) / pixel_dist
+
 
 
 def estimate_scaled_focal_length( real_depth_mm, real_dist_mm, measured_dist_pxl ) -> float:
@@ -71,14 +74,12 @@ def estimate_depth_mm( pixel_focal_length, p1, p2, real_distance, W=1, H=1 ) -> 
     depth = (pixel_focal_length * real_distance) / pixel_distance
 
     return depth
+# ---------------------------------------------------------------------------------------------- 
 
 
 
-def estimate_face_direction(leye, reye, philtrum) -> glm.vec3:
-    direction = glm.normalize(glm.cross(philtrum - reye, philtrum - leye))
-    return direction
-
-
+# Methods related to hand and face orientation
+# ---------------------------------------------------------------------------------------------- 
 
 def joint_matrix( p1: glm.vec3, p2: glm.vec3 ) -> glm.mat4:
 
@@ -91,8 +92,7 @@ def joint_matrix( p1: glm.vec3, p2: glm.vec3 ) -> glm.mat4:
     return T * R * S
 
 
-
-def hand_compute_orientation( landmarks3D: np.ndarray ) -> glm.mat4:
+def estimate_hand_orientation( landmarks3D: np.ndarray ) -> glm.mat4:
 
     lms = landmarks3D
 
@@ -118,7 +118,7 @@ def derotate_hand( landmarks3D: np.ndarray ) -> list[glm.vec3]:
     p5  = landmarks3D[5]
     p17 = landmarks3D[17]
 
-    rotation = glm.inverse(hand_compute_orientation(landmarks3D))
+    rotation = glm.inverse(estimate_hand_orientation(landmarks3D))
 
     derotated = [ ]
     for point in landmarks3D:
@@ -127,7 +127,14 @@ def derotate_hand( landmarks3D: np.ndarray ) -> list[glm.vec3]:
     return derotated
 
 
+def estimate_face_direction(leye, reye, philtrum) -> glm.vec3:
+    direction = glm.normalize(glm.cross(philtrum - reye, philtrum - leye))
+    return direction
+# ---------------------------------------------------------------------------------------------- 
 
+
+# Methods related to hand gesture recognition
+# ---------------------------------------------------------------------------------------------- 
 def hand_is_grabbing( landmarks3D: np.ndarray ) -> bool:
 
     lms = derotate_hand(landmarks3D)
@@ -171,16 +178,7 @@ def hand_is_grabbing( landmarks3D: np.ndarray ) -> bool:
     c4 = xmin < x4 < xmax
 
     return c0 and c1 and c2 and c3
-
-
-
-
-def compute_finger_states( landmarks3D: np.ndarray ) -> list[bool]:
-
-    states = [ False ] * 5
-
-
-    return
+# ---------------------------------------------------------------------------------------------- 
 
 
 

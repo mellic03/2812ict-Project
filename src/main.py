@@ -175,7 +175,7 @@ def gl_thread_fn( ren: idk.Renderer, handDetector: HandDetector, faceDetector: F
             view = cam.viewMatrix()
             yaw = np.arctan2(view[2][0], view[0][0])
 
-            invLA = glm.inverse(methods.hand_compute_orientation(handRenderer_L.wlms))
+            invLA = glm.inverse(methods.estimate_hand_orientation(handRenderer_L.wlms))
             rotation = invLA
 
             handRenderer_L.setRotation(glm.rotate(-yaw, glm.vec3(0, 1, 0)))
