@@ -220,7 +220,7 @@ def evaluate_face_roll( img, leye, reye, draw=False ) -> tuple[bool, float]:
     EPSILON = 0.05 # Allow 5% tolerance
 
     roll_fitness = math.fabs(leye.y - reye.y)
-    roll_good    = roll_fitness <= 1
+    roll_good    = roll_fitness <= 1 + (100.0 * EPSILON)
 
     if draw:
         draw_face_roll(img, leye, reye, roll_good)

@@ -86,13 +86,15 @@ def gl_thread_fn( ren: idk.Renderer, handDetector: HandDetector, faceDetector: F
     idk.storeProgram("plaincolor", plaincolor_shader)
 
     cam = idk.Camera(80.0, width/height, 0.1, 1000.0)
+    cam.translate(glm.vec3(0, 1.5, 0))
     cam.yaw(3.14159)
 
     texshader = idk.compileShaderProgram("src/shaders/", "general.vs", "textured.fs")
 
-    grass_mh = idk.loadOBJ(b"models/report.obj", b"textures/report.png")
-    sky_mh = idk.loadOBJ(b"models/skybox.obj", b"textures/skybox.png")
-    cockpit_mh = idk.loadOBJ(b"models/cockpit.obj", b"textures/palette.png")
+    grass_mh    = idk.loadOBJ(b"models/grass.obj", b"textures/grass.png")
+    demoroom_mh = idk.loadOBJ(b"models/report.obj", b"textures/report.png")
+    sky_mh      = idk.loadOBJ(b"models/skybox.obj", b"textures/skybox.png")
+    cockpit_mh  = idk.loadOBJ(b"models/cockpit.obj", b"textures/palette.png")
 
 
     handRenderer_L  = HandRenderer("config/hand.ini")
@@ -120,24 +122,9 @@ def gl_thread_fn( ren: idk.Renderer, handDetector: HandDetector, faceDetector: F
             idk.setvec3(texshader, "un_view_pos", cam.position())
             idk.setmat4(texshader, "un_model", glm.mat4(1.0))
 
-            # Render background
-            # ---------------------------------------------------------
             idk.drawVerticesTextured(texshader, sky_mh)
-            # ---------------------------------------------------------
-
-            # Render terrain
-            # ---------------------------------------------------------
-            idk.setfloat(texshader, "un_spec_strength", 0.1)
             idk.drawVerticesTextured(texshader, grass_mh)
-            # ---------------------------------------------------------
-
-            # Cockpit
-            # ---------------------------------------------------------
-            rotation = glm.rotate(glm.radians(-90), glm.vec3(0.0, 1.0, 0.0))
-            translation = glm.translate(glm.vec3(10.0, -3.0, 0.0))
-            idk.setmat4(texshader, "un_model", translation * rotation)
             idk.drawVerticesTextured(texshader, cockpit_mh)
-            # ---------------------------------------------------------
 
 
             handRenderer_L.draw(handDetector, cam, "Left")

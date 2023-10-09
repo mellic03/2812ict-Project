@@ -185,7 +185,7 @@ class FaceController():
         self.__center = self.__estimate_translation(fr.vertices)
 
         self.__camera_apply_orientation(cam, self.__front)
-        # self.__camera_apply_translation(cam, self.__translation)
+        self.__camera_apply_translation(cam, self.__center)
 
         self.__vertices = fr.vertices
 

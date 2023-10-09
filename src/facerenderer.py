@@ -33,45 +33,29 @@ class FaceRenderer:
         config = configparser.ConfigParser()
         config.read(self.config_path)
 
-        self.skin_color = glm.vec3(
-            float(config["visual"]["skin_r"]) / 255.0,
-            float(config["visual"]["skin_g"]) / 255.0,
-            float(config["visual"]["skin_b"]) / 255.0
-        )
         self.iris_color = glm.vec3(
             float(config["visual"]["iris_r"]) / 255.0,
             float(config["visual"]["iris_g"]) / 255.0,
             float(config["visual"]["iris_b"]) / 255.0
         )
-        self.specular = glm.vec3(
-            float(config["visual"]["spec_r"]) / 255.0,
-            float(config["visual"]["spec_g"]) / 255.0,
-            float(config["visual"]["spec_b"]) / 255.0
-        )
-        self.spec_exp = float(config["visual"]["spec_exp"])
 
-        if config.has_option("visual", "texture_path"):
-            self.use_face_texture = True
-            texture_path = config["visual"]["texture_path"]
-            if texture_path != "":
-                texture_path = texture_path.encode('utf-8')
-                self.face_mh.glTextureID = idk.loadTexture(texture_path)
-        else:
-            self.use_face_texture = False
+        texture_path = config["visual"]["texture_path"]
+        texture_path = texture_path.encode('utf-8')
+        self.face_mh.glTextureID = idk.loadTexture(texture_path)
 
-        self.lerp_alpha = float(config["tweaks"]["lerp_alpha"])
+        self.lerp_alpha = float(config["tweaks"]["interpolation"])
 
 
     def __reload_shaders(self) -> None:
         self.iris_shader = idk.compileShaderProgram(
             "src/shaders/", "general.vs", "face/iris.fs"
         )
-        self.face_shader_tex = idk.compileShaderProgram(
+        self.shader = idk.compileShaderProgram(
             "src/shaders/", "general.vs", self.face_shader_tex_path
         )
-        self.face_shader = idk.compileShaderProgram(
-            "src/shaders/", "general.vs", self.face_shader_path
-        )
+        # self.face_shader = idk.compileShaderProgram(
+        #     "src/shaders/", "general.vs", self.face_shader_path
+        # )
 
 
     def __init__(self, configpath: str, eyeholes: bool = True) -> None:
@@ -79,12 +63,12 @@ class FaceRenderer:
 
         self.iris_shader_path = "face/iris.fs"
 
-        if defs.USE_PYTHON:
-            self.face_shader_tex_path = "face/face-tex-py.fs"
-            self.face_shader_path = "face/face-py.fs"
-        else:
-            self.face_shader_tex_path = "face/face-tex.fs"
-            self.face_shader_path = "face/face.fs"
+        # if defs.USE_PYTHON:
+        self.face_shader_tex_path = "face/face-tex-py.fs"
+        self.face_shader_path = "face/face-py.fs"
+        # else:
+            # self.face_shader_tex_path = "face/face-tex.fs"
+            # self.face_shader_path = "face/face.fs"
 
         filepath = "data/indices.txt"
         if eyeholes:
@@ -190,31 +174,22 @@ class FaceRenderer:
 
 
     def __draw_face(self, cam: idk.Camera, translation = glm.vec3(0.0)) -> None:
-        current_shader = self.face_shader
-
-        if self.use_face_texture:
-            current_shader = self.face_shader_tex
+        # current_shader = self.face_shader
 
         rotation    = glm.rotate(self.theta, glm.vec3(0.0, 1.0, 0.0))
         trans       = glm.translate(translation)
         scale       = glm.scale(glm.vec3(2.0))
         transform   = trans * rotation * scale
 
-        glUseProgram(current_shader)
-        idk.setmat4(current_shader,  "un_view",     cam.viewMatrix())
-        idk.setmat4(current_shader,  "un_proj",     cam.projection())
-        idk.setmat4(current_shader,  "un_model",    transform*glm.scale(glm.vec3(-1, 1, 1)))
-        idk.setvec3(current_shader,  "un_color",    self.skin_color)
-        idk.setvec3(current_shader,  "un_specular", self.specular)
-        idk.setvec3(current_shader,  "un_view_pos", cam.position())
-        idk.setfloat(current_shader, "un_spec_exponent", self.spec_exp)
+        glUseProgram(self.shader)
+        idk.setmat4(self.shader,  "un_view",     cam.viewMatrix())
+        idk.setmat4(self.shader,  "un_proj",     cam.projection())
+        idk.setmat4(self.shader,  "un_model",    transform*glm.scale(glm.vec3(-1, 1, 1)))
+        idk.setTexture(self.shader, 0, self.face_mh.glTextureID, "un_texture")
 
         idk.indexedSubData(self.face_mh.VAO, self.face_mh.VBO, self.vertices)
 
-        if self.use_face_texture:
-            idk.drawVerticesIndexedTextured(self.face_mh, self.face_shader_tex)
-        else:
-            idk.drawVerticesIndexed(self.face_mh)
+        idk.drawVerticesIndexedTextured(self.face_mh, self.shader)
 
 
 
