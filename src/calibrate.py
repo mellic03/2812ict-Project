@@ -25,16 +25,17 @@ class HandFaceRatio:
 
         self.depth_real    = real_depth_mm
         self.h_0_17_real   = real_h_0_17_mm
-        self.h_0_17_pxl    = math.inf
-        self.h_0_5_est     = math.inf
-        self.h_5_17_est    = math.inf
-        self.leye_reye_est = math.inf
-        self.mid_phil_est  = math.inf
+        self.h_0_17_pxl    = 0
+        self.h_0_5_est     = 0
+        self.h_5_17_est    = 0
+        self.leye_reye_est = 0
+        self.mid_phil_est  = 0
 
         self.focal_est     = 1
+        self.num_samples   = 0
 
 
-    def __update_hand_distances(self, img, hd: HandDetector):
+    def __add_hand_sample(self, img, hd: HandDetector):
         results = hd.results()
         if not results or not results.multi_hand_landmarks:
             return
@@ -48,21 +49,21 @@ class HandFaceRatio:
         lm5  = ndc_to_pixel(handlms.landmark[5], img.shape)
         lm17 = ndc_to_pixel(handlms.landmark[17], img.shape)
 
-        self.h_0_17_pxl = glm.distance(lm0, lm17)
-        h_0_5_pxl  = glm.distance(lm0, lm5)
-        h_5_17_pxl = glm.distance(lm5, lm17)
+        self.h_0_17_pxl += glm.distance(lm0, lm17)
+        h_0_5_pxl        = glm.distance(lm0, lm5)
+        h_5_17_pxl       = glm.distance(lm5, lm17)
 
-        self.h_0_5_est  = methods.pixel_dist_to_real_dist(
-            self.h_0_17_real, self.h_0_17_pxl, h_0_5_pxl
+        self.h_0_5_est  += methods.pixel_dist_to_real_dist(
+            self.h_0_17_real, self.h_0_17_pxl/self.num_samples, h_0_5_pxl
         )
 
-        self.h_5_17_est = methods.pixel_dist_to_real_dist(
-            self.h_0_17_real, self.h_0_17_pxl, h_5_17_pxl
+        self.h_5_17_est += methods.pixel_dist_to_real_dist(
+            self.h_0_17_real, self.h_0_17_pxl/self.num_samples, h_5_17_pxl
         )
         
 
 
-    def __update_face_distances(self, img, fd: FaceDetector):
+    def __add_face_sample(self, img, fd: FaceDetector):
         results = fd.results()
         if not results or not results.multi_face_landmarks:
             return
@@ -81,26 +82,33 @@ class HandFaceRatio:
         leye_reye_pxl = glm.distance(leye, reye)
         mid_phil_pxl  = glm.distance(midbrow, philtrum)
 
-        self.leye_reye_est = methods.pixel_dist_to_real_dist(
-            self.h_0_17_real, self.h_0_17_pxl, leye_reye_pxl
+        self.leye_reye_est += methods.pixel_dist_to_real_dist(
+            self.h_0_17_real, self.h_0_17_pxl/self.num_samples, leye_reye_pxl
         )
 
-        self.mid_phil_est = methods.pixel_dist_to_real_dist(
-            self.h_0_17_real, self.h_0_17_pxl, mid_phil_pxl
+        self.mid_phil_est += methods.pixel_dist_to_real_dist(
+            self.h_0_17_real, self.h_0_17_pxl/self.num_samples, mid_phil_pxl
         )
 
 
-    def updatePixelDistances(self, img, hd: HandDetector, fd: FaceDetector):
-        self.__update_hand_distances(img, hd)
-        self.__update_face_distances(img, fd)
+    def addSample(self, img, hd: HandDetector, fd: FaceDetector):
+        self.num_samples += 1
+        self.__add_hand_sample(img, hd)
+        self.__add_face_sample(img, fd)
+
+
+    def __div_config(self, config, name):
+        for key in config[name]:
+            value = float(config[name][key]) / self.num_samples
+            config[name][key] = str(value)
 
 
     def __writeINI_camera(self, config):
+        smp = self.num_samples
 
         focal_dist = methods.estimate_scaled_focal_length(
-            self.depth_real, self.h_0_17_real, self.h_0_17_pxl
+            self.depth_real, self.h_0_17_real, self.h_0_17_pxl/smp
         )
-
         config["camera"] = {
             "scaled-focal-length": focal_dist
         }
@@ -108,19 +116,18 @@ class HandFaceRatio:
 
     def __writeINI_hand(self, config):
         config["hand"] = {
-            "dist-0-5-mm":  self.h_0_5_est,
-            "dist-0-17-mm": self.h_0_17_real,
-            "dist-5-17-mm": self.h_5_17_est,
-            "ratio_0-5_5-17": self.h_0_5_est / self.h_5_17_est
+            "dist-0_5-mm":      self.h_0_5_est   / self.num_samples,
+            "dist-0_17-mm":     self.h_0_17_real,
+            "dist-5_17-mm":     self.h_5_17_est  / self.num_samples,
+            "ratio-0_5-5_17":   self.h_0_5_est / self.h_5_17_est
         }
 
 
     def __writeINI_face(self, config):
         config["face"] = {
-            "dist-leye-reye-mm":        self.leye_reye_est,
-            "dist-midbrow-philtrum-mm": self.mid_phil_est,
-            "ratio-width-by-height":    self.mid_phil_est / self.leye_reye_est
-       
+            "dist-leye_reye-mm":        self.leye_reye_est / self.num_samples,
+            "dist-midbrow_philtrum-mm": self.mid_phil_est  / self.num_samples,
+            "ratio-WxH":                self.mid_phil_est / self.leye_reye_est
         }
 
 
@@ -137,50 +144,6 @@ class HandFaceRatio:
 
 
 
-def draw_hand_lines( img, hd: HandDetector, real_depth_mm: float, real_0_17: float ) -> None:
-
-    results = hd.results()
-
-    if results and results.multi_hand_landmarks:
-        for handLms in results.multi_hand_landmarks:
-            hd.mpDraw.draw_landmarks(
-                img,
-                handLms,
-                hd.hands.HAND_CONNECTIONS
-            )
-            
-            x0  = int( img.shape[1] * handLms.landmark[0].x)
-            x5  = int( img.shape[1] * handLms.landmark[5].x)
-            x17 = int( img.shape[1] * handLms.landmark[17].x)
-
-            y0  = int( img.shape[0] * handLms.landmark[0].y)
-            y5  = int( img.shape[0] * handLms.landmark[5].y)
-            y17 = int( img.shape[0] * handLms.landmark[17].y)
-
-            color = (0, 0, 255)
-            if math.fabs(y5-y17) < 5.0:
-                color = (0, 255, 0)
-
-            cv.line( img,
-                (x5, y5),
-                (x17, y5),
-                color, thickness=5
-            )
-
-            cv.line( img,
-                (x17, y17),
-                (x5,  y17),
-                color, thickness=5
-            )
-            
-            pixel_0_17 = glm.distance([x0, y0], [x17, y17])
-
-            focal_length = (real_depth_mm * pixel_0_17) / real_0_17
-
-            cv.putText(img, "f: %.2f" % (focal_length), (10, 50), cv.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255))
-
-
-
 def draw_face_roll( img, leye, reye, good=False ):
 
     color_A = (255, 0, 50) if not good else (0, 255, 0)
@@ -189,13 +152,13 @@ def draw_face_roll( img, leye, reye, good=False ):
     cv.line( img,
         (int(leye.x),  int(leye.y)),
         (int(reye.x),  int(leye.y)),
-        color_A, thickness=5
+        color_A, thickness=2
     )
 
     cv.line( img,
         (int(reye.x),  int(reye.y)),
         (int(leye.x),  int(reye.y)),
-        color_B, thickness=5
+        color_B, thickness=2
     )
 
 
@@ -211,13 +174,13 @@ def draw_face_yaw( img, leye, philtrum, reye, good=False ):
     cv.line( img,
         (int(leye.x),      int(philtrum.y)),
         (int(philtrum.x),  int(philtrum.y)),
-        color_A, thickness=5
+        color_A, thickness=2
     )
 
     cv.line( img,
         (int(leye.x),  int(leye.y)),
         (int(leye.x),  int(philtrum.y)),
-        color_B, thickness=5
+        color_B, thickness=2
     )
 
     cv.line( img,
@@ -232,13 +195,13 @@ def draw_face_yaw( img, leye, philtrum, reye, good=False ):
     cv.line( img,
         (int(reye.x),      int(philtrum.y)),
         (int(philtrum.x),  int(philtrum.y)),
-        color_B, thickness=5
+        color_B, thickness=2
     )
 
     cv.line( img,
         (int(reye.x),  int(reye.y)),
         (int(reye.x),  int(philtrum.y)),
-        color_A, thickness=5
+        color_A, thickness=2
     )
 
     cv.line( img,
@@ -254,10 +217,10 @@ def evaluate_face_roll( img, leye, reye, draw=False ) -> tuple[bool, float]:
 
     # leye.y should rougly equal reye.y for roll alignment
 
-    EPSILON = 5
+    EPSILON = 0.05 # Allow 5% tolerance
 
     roll_fitness = math.fabs(leye.y - reye.y)
-    roll_good  = -EPSILON <= roll_fitness <= +EPSILON
+    roll_good    = roll_fitness <= 1
 
     if draw:
         draw_face_roll(img, leye, reye, roll_good)
@@ -279,9 +242,7 @@ def evaluate_face_yaw( img, leye, reye, philtrum, draw=False ) -> tuple[bool, fl
     max_dist = max([leye_philtrum_xdist, reye_philtrum_xdist])
 
     yaw_fitness = (min_dist / max_dist)
-    yaw_good    = yaw_fitness >= 1 - EPSILON
-
-    print(yaw_fitness)
+    yaw_good    = (1.0 + EPSILON) * yaw_fitness >= 1
 
     if draw:
         draw_face_yaw(img, leye, philtrum, reye, yaw_good)
@@ -321,13 +282,13 @@ def draw_hand_roll( img, lm0, lm5, lm17, good=False ):
     cv.line( img,
         (int(lm17.x),   int(lm17.y)),
         (int(lm17.x),   int(lm0.y)),
-        color_A, thickness=5
+        color_A, thickness=2
     )
 
     cv.line( img,
         (int(lm0.x),   int(lm0.y)),
         (int(lm0.x),   int(lm17.y)),
-        color_B, thickness=5
+        color_B, thickness=2
     )
 
 
@@ -374,8 +335,8 @@ def main():
     faceDetector = FaceDetector()
 
     cap = cv.VideoCapture(0)
-    cap.set(cv.CAP_PROP_FRAME_WIDTH,  1280)
-    cap.set(cv.CAP_PROP_FRAME_HEIGHT, 720)
+    # cap.set(cv.CAP_PROP_FRAME_WIDTH,  1280)
+    # cap.set(cv.CAP_PROP_FRAME_HEIGHT, 720)
 
     hfRatio = HandFaceRatio(real_depth, real_0_17)
 
@@ -395,14 +356,15 @@ def main():
         h_roll_good = evaluate_hand_alignment(img, handDetector)
         f_roll_good, f_yaw_good = evaluate_face_alignment(img, faceDetector)
 
+        if h_roll_good and f_roll_good and f_yaw_good:
+            hfRatio.addSample(img, handDetector, faceDetector)
+            print("Samples: %d" % (hfRatio.num_samples))
 
-        if not (h_roll_good is None or f_roll_good is None or f_yaw_good is None):
-            if h_roll_good and f_roll_good and f_yaw_good:
-                hfRatio.updatePixelDistances(img, handDetector, faceDetector)
+        cv.imshow("Image", cv.flip(img, 1))
 
+        key = cv.waitKey(1)
 
-        cv.imshow("Image", img)
-        if cv.waitKey(1) == 27:
+        if key == 27 or key == ord(' '):
             break
 
     hfRatio.writeINI("config/measurements.ini")
