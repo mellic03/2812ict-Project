@@ -43,8 +43,8 @@ def preprocess_img( img ):
 
 def cv_thread_fn( ren: idk.Renderer, handDetector: HandDetector, faceDetector: FaceDetector ):
     cap = cv.VideoCapture(0)
-    cap.set(cv.CAP_PROP_FRAME_WIDTH,  1280)
-    cap.set(cv.CAP_PROP_FRAME_HEIGHT, 720)
+    # cap.set(cv.CAP_PROP_FRAME_WIDTH,  1280)
+    # cap.set(cv.CAP_PROP_FRAME_HEIGHT, 720)
 
     while ren.running():
         res, img = cap.read()
@@ -74,6 +74,10 @@ def gl_thread_fn( ren: idk.Renderer, handDetector: HandDetector, faceDetector: F
     height = 1200
     ren.ren_init()
 
+    glDisable(GL_CULL_FACE)
+    glEnable(GL_MULTISAMPLE)
+    SDL_GL_SetSwapInterval(0)
+
     idk.loadPrimitive(idk.PRIMITIVE_UVSPHERE, "models/uvsphere.obj")
     idk.loadPrimitive(idk.PRIMITIVE_CYLINDER, "models/cylinder.obj")
     idk.loadPrimitive(idk.PRIMITIVE_CUBE, "models/cube.obj")
@@ -81,26 +85,18 @@ def gl_thread_fn( ren: idk.Renderer, handDetector: HandDetector, faceDetector: F
     plaincolor_shader = idk.compileShaderProgram("src/shaders/", "general.vs", "plaincolor.fs")
     idk.storeProgram("plaincolor", plaincolor_shader)
 
-
-    glDisable(GL_CULL_FACE)
-    glEnable(GL_MULTISAMPLE)
-
-    SDL_GL_SetSwapInterval(0)
-
-
     cam = idk.Camera(80.0, width/height, 0.1, 1000.0)
     cam.yaw(3.14159)
 
-    sky_mh = idk.loadOBJ(b"models/skybox.obj", b"textures/skybox.png")
-    sky_shader = idk.compileShaderProgram("src/shaders/", "general.vs", "skybox.fs")
+    texshader = idk.compileShaderProgram("src/shaders/", "general.vs", "textured.fs")
 
     grass_mh = idk.loadOBJ(b"models/report.obj", b"textures/report.png")
-    grass_shader = idk.compileShaderProgram("src/shaders/", "general.vs", "textured.fs")
-
+    sky_mh = idk.loadOBJ(b"models/skybox.obj", b"textures/skybox.png")
     cockpit_mh = idk.loadOBJ(b"models/cockpit.obj", b"textures/palette.png")
 
-    handRenderer_L = HandRenderer("config/hand.ini")
-    handRenderer_R = HandRenderer("config/hand.ini")
+
+    handRenderer_L  = HandRenderer("config/hand.ini")
+    handRenderer_R  = HandRenderer("config/hand.ini")
     handController_L = HandController()
     handController_R = HandController()
 
@@ -118,47 +114,36 @@ def gl_thread_fn( ren: idk.Renderer, handDetector: HandDetector, faceDetector: F
 
             ren.beginFrame(cam)
 
+            glUseProgram(texshader)
+            idk.setmat4(texshader, "un_proj", cam.projection())
+            idk.setmat4(texshader, "un_view", cam.viewMatrix())
+            idk.setvec3(texshader, "un_view_pos", cam.position())
+            idk.setmat4(texshader, "un_model", glm.mat4(1.0))
+
             # Render background
             # ---------------------------------------------------------
-            glUseProgram(sky_shader)
-            idk.setmat4(sky_shader, "un_proj", cam.projection())
-            idk.setmat4(sky_shader, "un_view", cam.viewMatrix())
-            idk.setmat4(sky_shader, "un_model", glm.mat4(1.0))
-            idk.drawVerticesTextured(sky_shader, sky_mh)
+            idk.drawVerticesTextured(texshader, sky_mh)
             # ---------------------------------------------------------
 
             # Render terrain
             # ---------------------------------------------------------
-            glUseProgram(grass_shader)
-            idk.setmat4(grass_shader, "un_proj", cam.projection())
-            idk.setmat4(grass_shader, "un_view", cam.viewMatrix())
-            idk.setmat4(grass_shader, "un_model", glm.mat4(1.0))
-            idk.setvec3(grass_shader, "un_view_pos", cam.position())
-            idk.setfloat(grass_shader, "un_spec_exponent", 4)
-            idk.setfloat(grass_shader, "un_spec_strength", 0.1)
-            idk.drawVerticesTextured(grass_shader, grass_mh)
+            idk.setfloat(texshader, "un_spec_strength", 0.1)
+            idk.drawVerticesTextured(texshader, grass_mh)
             # ---------------------------------------------------------
 
             # Cockpit
             # ---------------------------------------------------------
-            # glUseProgram(grass_shader)
-            # idk.setmat4(sky_shader, "un_proj", cam.projection())
-            # idk.setmat4(sky_shader, "un_view", cam.viewMatrix())
-
-            # rotation = glm.rotate(glm.radians(-90), glm.vec3(0.0, 1.0, 0.0))
-            # translation = glm.translate(glm.vec3(10.0, -3.0, 0.0))
-            # idk.setmat4(sky_shader, "un_model", translation * rotation)
-            # idk.drawVerticesTextured(grass_shader, cockpit_mh)
+            rotation = glm.rotate(glm.radians(-90), glm.vec3(0.0, 1.0, 0.0))
+            translation = glm.translate(glm.vec3(10.0, -3.0, 0.0))
+            idk.setmat4(texshader, "un_model", translation * rotation)
+            idk.drawVerticesTextured(texshader, cockpit_mh)
             # ---------------------------------------------------------
 
 
             handRenderer_L.draw(handDetector, cam, "Left")
             handRenderer_R.draw(handDetector, cam, "Right")
-        
-            handController_L.update(handRenderer_L, cam)
-            global hgrabbing
-            hgrabbing = handController_L.grabbing
-
+            handController_L.update(handRenderer_L, cam, dtime)
+            handController_R.update(handRenderer_R, cam, dtime)
 
             faceRenderer.draw(faceDetector, cam, dtime)
             faceController.update(faceRenderer, cam)
@@ -175,57 +160,37 @@ def gl_thread_fn( ren: idk.Renderer, handDetector: HandDetector, faceDetector: F
             view = cam.viewMatrix()
             yaw = np.arctan2(view[2][0], view[0][0])
 
-            invLA = glm.inverse(methods.estimate_hand_orientation(handRenderer_L.wlms))
-            rotation = invLA
 
             handRenderer_L.setRotation(glm.rotate(-yaw, glm.vec3(0, 1, 0)))
             handRenderer_L.setTranslation(glm.translate(cam.position()))
+
+            handRenderer_R.setRotation(glm.rotate(-yaw, glm.vec3(0, 1, 0)))
+            handRenderer_R.setTranslation(glm.translate(cam.position()))
             # ----------------------------------------------------------------------------------
 
 
-            # Make dist(model_hand, 3D_camera) == dist(real_hand, real_camera)
+            # Make dist(model_hand, 3D_camera) ~= dist(real_hand, real_camera)
             # ----------------------------------------------------------------------------------
-            face_depth = faceController.getDepth()
+            face_depth = faceController.calculateDepth()
             hand_depth = handRenderer_L.calculateDepth()
+            handRenderer_L.depthCorrection(glm.clamp(-(face_depth - hand_depth), -math.inf, -0.1))
 
-            print("%.2f,  %.2f" % (face_depth, hand_depth))
-
-            handRenderer_L.depthCorrection(2 * -(face_depth - hand_depth))
+            hand_depth = handRenderer_R.calculateDepth()
+            handRenderer_R.depthCorrection(glm.clamp(-(face_depth - hand_depth), -math.inf, -0.1))
             # ----------------------------------------------------------------------------------
 
 
-            # get hand position relative to face
+            # Visualise face direction
             # ----------------------------------------------------------------------------------
-            
-            # ----------------------------------------------------------------------------------
-
-
-            # Face direction
-            # ----------------------------------------------------------------------------------
-            philtrum = 0.5*glm.vec3(6.0, -1.5, -2.0) + faceController.philtrum()
+            center = 0.5*glm.vec3(6, -1.5, -2) + faceController.center()
 
             dir = glm.normalize(faceController.front())
             dir.z *= -1.0
-
             zpos = glm.vec3(0, 0, 1)
 
-            methods.render_vector(
-                philtrum,
-                dir,
-                color = dir,
-            )
-
-            methods.render_vector(
-                philtrum,
-                zpos,
-                color = zpos,
-            )
-
-            methods.render_vector(
-                philtrum + 0.5*zpos,
-                dir - zpos,
-                color = dir - zpos,
-            )
+            methods.render_vector(center, dir, color = dir)
+            methods.render_vector(center, zpos, color = zpos)
+            methods.render_vector(center + 0.5*zpos, dir - zpos, color = dir - zpos)
             # ----------------------------------------------------------------------------------
 
 
@@ -244,8 +209,15 @@ def main():
         defs.USE_CPP    = False
 
     config = configparser.ConfigParser()
-    config.read("config/camera.ini")
-    defs.FOCAL_LENGTH = float(config["specifications"]["focal-length"])
+    config.read("config/measurements.ini")
+
+    defs.FOCAL_LENGTH             = float(config["camera"]["scaled-focal-length"])
+    defs.DIST_0_5_mm              = float(config["hand"]["dist-0_5-mm"])
+    defs.DIST_0_17_mm             = float(config["hand"]["dist-0_17-mm"])
+    defs.DIST_5_17_mm             = float(config["hand"]["dist-5_17-mm"])
+    defs.DIST_LEYE_REYE_mm        = float(config["face"]["dist-leye_reye-mm"])
+    defs.DIST_MIDBROW_PHILTRUM_mm = float(config["face"]["dist-midbrow_philtrum-mm"])
+
 
     ren = idk.Renderer(b"window", 1500, 1200, False )
     handDetector = HandDetector()

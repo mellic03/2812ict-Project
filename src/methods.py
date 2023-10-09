@@ -3,7 +3,9 @@ import glm
 import idk
 import math
 import numpy as np
-import cv2 as cv
+
+
+# This file contains the implementations for the methods discussed in the report.
 
 
 
@@ -80,16 +82,10 @@ def estimate_depth_mm( pixel_focal_length, p1, p2, real_distance, W=1, H=1 ) -> 
 
 # Methods related to hand and face orientation
 # ---------------------------------------------------------------------------------------------- 
-
 def joint_matrix( p1: glm.vec3, p2: glm.vec3 ) -> glm.mat4:
-
-    dist = glm.distance(p1, p2)
-
     T: glm.mat4 = glm.translate(p1)
     R: glm.mat4 = glm.inverse(glm.lookAt(p1, p2, glm.vec3(0, 1, 0)))
-    S: glm.mat4 = glm.scale(glm.vec3(0.03, 0.03, 2*dist))
-
-    return T * R * S
+    return T * R
 
 
 def estimate_hand_orientation( landmarks3D: np.ndarray ) -> glm.mat4:
@@ -179,6 +175,24 @@ def hand_is_grabbing( landmarks3D: np.ndarray ) -> bool:
 
     return c0 and c1 and c2 and c3
 # ---------------------------------------------------------------------------------------------- 
+
+
+
+def ndc_to_viewspace( ndc: glm.vec3, projection: glm.mat4 ) -> glm.vec3:
+    """
+        Convert normalized device coordinatess (NDC) to view-space.
+        If a specific depth is wanted in view-space, set the z component of `ndc` to the depth 
+    """
+
+    target_depth = projection * glm.vec4(0, 0, ndc.z, 1)
+    target_depth.xyz /= target_depth.w
+
+    ndc.z = target_depth.z
+
+    viewspace = glm.inverse(projection) * glm.vec4(ndc, 1)
+    viewspace.xy /= viewspace.w
+
+    return viewspace
 
 
 

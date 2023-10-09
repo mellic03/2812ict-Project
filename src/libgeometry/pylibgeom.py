@@ -110,19 +110,15 @@ def calculate_normals(vertices: np.ndarray, indices: np.ndarray):
 
 
 def lerp_verts( verts0: np.ndarray, verts1: np.ndarray, alpha ):
-    assert verts0.shape == verts1.shape, "verts0 and verts1 are of different shapes"
+    # assert verts0.shape == verts1.shape, "verts0 and verts1 are of different shapes"
 
     for i in range(0, verts0.shape[0]):
         v0 = verts0[i]
         v1 = verts1[i]
 
-        # v0[0] = alpha*v0[0] + (1.0-alpha)*v1[0]
-        # v0[1] = alpha*v0[1] + (1.0-alpha)*v1[1]
-        # v0[2] = alpha*v0[2] + (1.0-alpha)*v1[2]
-
-        v0[0] = v1[0]
-        v0[1] = v1[1]
-        v0[2] = v1[2]
+        v0[0] = alpha*v0[0] + (1.0-alpha)*v1[0]
+        v0[1] = alpha*v0[1] + (1.0-alpha)*v1[1]
+        v0[2] = alpha*v0[2] + (1.0-alpha)*v1[2]
 
     
 

@@ -209,7 +209,6 @@ class FaceRenderer:
         idk.setvec3(current_shader,  "un_view_pos", cam.position())
         idk.setfloat(current_shader, "un_spec_exponent", self.spec_exp)
 
-        glUseProgram(current_shader)
         idk.indexedSubData(self.face_mh.VAO, self.face_mh.VBO, self.vertices)
 
         if self.use_face_texture:

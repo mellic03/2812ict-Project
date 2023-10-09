@@ -42,7 +42,7 @@ def lmarks_to_np( landmarks, output: np.ndarray, aspect, offset=glm.vec2(-0.5, -
         v = landmarks[i]
         output[i][0] = (v.x + offset.x) * aspect
         output[i][1] = (v.y + offset.y)
-        output[i][2] = v.z
+        output[i][2] = glm.vec3(v.z).z
 
     return output
 

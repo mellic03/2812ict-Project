@@ -62,8 +62,8 @@ class HandDetector:
         self.mpHands  = mp.solutions.hands.Hands(
             static_image_mode=False,
             max_num_hands=2,
-            min_detection_confidence=0.5,
-            min_tracking_confidence=0.5
+            min_detection_confidence=0.4,
+            min_tracking_confidence=0.4
         )
         self.mpDraw  = mp.solutions.drawing_utils
         self.drawStyles  = mp.solutions.drawing_styles

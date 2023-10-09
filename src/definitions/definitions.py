@@ -9,12 +9,23 @@ USE_CPP = False
 IMG_W = None
 IMG_H = None
 
-FOCAL_LENGTH = None
-
-
 RES_X = None
 RES_Y = None
 
+FOCAL_LENGTH = None
 
-# USER_INTERPUPILLARY_DISTANCE = None
-# USER_BROW_PHILTRUM_DISTANCE  = None
+DIST_0_5_mm              = None
+DIST_0_17_mm             = None
+DIST_5_17_mm             = None
+DIST_LEYE_REYE_mm        = None
+DIST_MIDBROW_PHILTRUM_mm = None
+
+
+LBROW_IDX = 223
+RBROW_IDX = 443
+LEYE_IDX  = 33
+REYE_IDX  = 263
+
+MIDBROW_IDX  = 168
+PHILTRUM_IDX = 164
+
