@@ -3,29 +3,29 @@ import glm
 import idk
 import math
 import numpy as np
-
+import cv2 as cv
 
 # This file contains the implementations for the methods discussed in the report.
 
 
 
-# Attempts at improving hand detection.
+# Attempt at improving hand detection.
 # ---------------------------------------------------------------------------------------------- 
-# def img_edge_enhancement( img: np.ndarray ) -> np.ndarray:
+def edge_enhancement( img ):
 
-#     gray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
-#     lap = cv.Laplacian(gray, -1, ksize=5, scale=1, delta=0, borderType=cv.BORDER_DEFAULT)
-#     lap = cv.cvtColor(lap, cv.COLOR_GRAY2BGR)
+    gray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
+    lap = cv.Laplacian(gray, -1, ksize=5, scale=1, delta=0, borderType=cv.BORDER_DEFAULT)
+    lap = cv.cvtColor(lap, cv.COLOR_GRAY2BGR)
 
-#     # lap = cv.resize(lap, (0, 0), fx=0.5, fy=0.5, interpolation=cv.INTER_LINEAR)
-#     # lap = cv.GaussianBlur(lap, (7, 7), 0)
+    lap = cv.resize(lap, (0, 0), fx=0.5, fy=0.5, interpolation=cv.INTER_LINEAR)
+    lap = cv.GaussianBlur(lap, (7, 7), 0)
 
-#     # lap = cv.resize(lap, (0, 0), fx=2, fy=2, interpolation=cv.INTER_LINEAR)
-#     # lap = cv.GaussianBlur(lap, (3, 3), 0)
+    lap = cv.resize(lap, (0, 0), fx=2, fy=2, interpolation=cv.INTER_LINEAR)
+    lap = cv.GaussianBlur(lap, (3, 3), 0)
 
-#     lap = np.uint8(lap / 2)
+    lap = np.uint8(lap / 4)
 
-#     return img
+    return img
 # ---------------------------------------------------------------------------------------------- 
 
 

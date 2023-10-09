@@ -23,22 +23,6 @@ import definitions as defs
 import sys
 
 
-def preprocess_img( img ):
-
-    gray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
-    lap = cv.Laplacian(gray, -1, ksize=5, scale=1, delta=0, borderType=cv.BORDER_DEFAULT)
-    lap = cv.cvtColor(lap, cv.COLOR_GRAY2BGR)
-
-    lap = cv.resize(lap, (0, 0), fx=0.5, fy=0.5, interpolation=cv.INTER_LINEAR)
-    lap = cv.GaussianBlur(lap, (7, 7), 0)
-
-    lap = cv.resize(lap, (0, 0), fx=2, fy=2, interpolation=cv.INTER_LINEAR)
-    lap = cv.GaussianBlur(lap, (3, 3), 0)
-
-    lap = np.uint8(lap / 4)
-
-    return img
-
 
 
 def cv_thread_fn( ren: idk.Renderer, handDetector: HandDetector, faceDetector: FaceDetector ):
@@ -51,8 +35,6 @@ def cv_thread_fn( ren: idk.Renderer, handDetector: HandDetector, faceDetector: F
 
         if res == False:
             continue
-
-        img = preprocess_img(img)
 
         defs.IMG_H = img.shape[0]
         defs.IMG_W = img.shape[1]
