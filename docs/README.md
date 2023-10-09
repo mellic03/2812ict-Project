@@ -14,11 +14,11 @@ $ pip3 install -r requirements.txt
 
 The main program will refuse to start before the calibration program has run. This is necessary as the proportions of the users hands and face need to be known for accurate depth estimation.
 
-Run `calibration.py` from the root directory of the project. The program will first prompt for the real-world distance between hand landmarks 0 and 17. It will then request the expected real-world distance between the camera and the users face to be used during calibration.
+Run `calibrate.py` from the root directory of the project. The program will first prompt for the real-world distance between hand landmarks 0 and 17. It will then request the expected real-world distance between the camera and the users face to be used during calibration.
 
 
 ```
-$ python3 src/calibration.py
+$ python3 src/calibrate.py
 ```
 
 A window will open displaying the video feed from the webcam. Apply roll and yaw to the face to align the red/blue bars on the screen until they turn green. Do the same with either (and only one) hand, held next to the face such that the palm is facing the camera/screen. Each time the bars turn green the information is stored to create an average. A message will be printed to the terminal each time stating how many samples have been collected. One sample is likely sufficient but averaging many helps reduce error.
