@@ -324,12 +324,10 @@ def evaluate_hand_alignment( img, hd: HandDetector ):
         return roll_good
 
 
-
-
 def main():
 
-    real_depth = float(input("Real hand depth (mm): "))
-    real_0_17 = float(input("Real distance between hand landmarks 0 and 17 (mm): "))
+    real_0_17 = float(input("Real-world distance between hand landmarks 0 and 17 (mm): "))
+    real_depth = float(input("Real-world distance between camera and face to be used for calibration (mm): "))
 
     handDetector = HandDetector()
     faceDetector = FaceDetector()
