@@ -23,7 +23,6 @@ class HandController:
 
         if self.grabbing:
             delta = glm.vec3(hr.wlms[0]) - glm.vec3(hr.wlms_prev[0])
-            delta.xy = 0
             self.velocity += delta
 
 

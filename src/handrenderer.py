@@ -171,7 +171,6 @@ class HandRenderer:
 
 
 
-
     def __draw_joint_list(self, joint_list, cam: idk.Camera) -> None:
 
         for i in range(0, len(joint_list)-1):

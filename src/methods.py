@@ -6,9 +6,22 @@ import numpy as np
 import cv2 as cv
 
 
+def pixel_dist_to_real_dist( d, p, k ) -> float:
+    """
+    Given a known real-world distance `d` and it's corresponding distance in pixels `p`,
+    estimate the real-world distance corresponding to the pixel distance `k`.
+    This assumes both objects are the same distance from the camera.
+    """
+    return (k / p) * d
+
+
+def pixel_dist_to_real_depth( pixel_focal_length, pixel_dist, real_dist ) -> float:
+    """Convert"""
+
+    return (pixel_focal_length * real_dist) / pixel_dist
+
 
 def img_undistort( img: np.ndarray, cam_mat: np.ndarray, dst_coef: np.ndarray ) -> np.ndarray:
-
     return cv.undistort(img, cam_mat, dst_coef)
 
 
@@ -32,20 +45,14 @@ def img_undistort( img: np.ndarray, cam_mat: np.ndarray, dst_coef: np.ndarray ) 
 # ---------------------------------------------------------------------------------------------- 
 
 
-def pixel_dist_to_real_dist( d, p, k ) -> float:
+def estimate_scaled_focal_length( real_depth_mm, real_dist_mm, measured_dist_pxl ) -> float:
     """
-    Given a known real-world distance `d` and it's corresponding distance in pixels `p`,
-    estimate the real-world distance corresponding to the pixel distance `k`.
-    This assumes both objects are the same distance from the camera.
+        Estimate the pixel-scaled focal length of the camera by comparing a real distance
+        `real_dist_mm` to the measured distance in pixels `measured_dist_pxl`.
+        This assumes the points used for each distance are all `real_depth_mm` millimetres from
+        the camera.
     """
-    return (k / p) * d
-
-
-def pixel_dist_to_real_depth( pixel_focal_length, pixel_dist, real_dist ) -> float:
-    """Conver"""
-
-    return (pixel_focal_length * real_dist) / pixel_dist
-
+    return (real_depth_mm * measured_dist_pxl) / real_dist_mm
 
 
 def estimate_depth_mm( pixel_focal_length, p1, p2, real_distance, W=1, H=1 ) -> float:

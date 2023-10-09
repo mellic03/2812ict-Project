@@ -29,11 +29,11 @@ def preprocess_img( img ):
     lap = cv.Laplacian(gray, -1, ksize=5, scale=1, delta=0, borderType=cv.BORDER_DEFAULT)
     lap = cv.cvtColor(lap, cv.COLOR_GRAY2BGR)
 
-    # lap = cv.resize(lap, (0, 0), fx=0.5, fy=0.5, interpolation=cv.INTER_LINEAR)
-    # lap = cv.GaussianBlur(lap, (7, 7), 0)
+    lap = cv.resize(lap, (0, 0), fx=0.5, fy=0.5, interpolation=cv.INTER_LINEAR)
+    lap = cv.GaussianBlur(lap, (7, 7), 0)
 
-    # lap = cv.resize(lap, (0, 0), fx=2, fy=2, interpolation=cv.INTER_LINEAR)
-    # lap = cv.GaussianBlur(lap, (3, 3), 0)
+    lap = cv.resize(lap, (0, 0), fx=2, fy=2, interpolation=cv.INTER_LINEAR)
+    lap = cv.GaussianBlur(lap, (3, 3), 0)
 
     lap = np.uint8(lap / 2)
 
@@ -41,14 +41,10 @@ def preprocess_img( img ):
 
 
 
-global hgrabbing
-hgrabbing = False
-
-
 def cv_thread_fn( ren: idk.Renderer, handDetector: HandDetector, faceDetector: FaceDetector ):
     cap = cv.VideoCapture(0)
-    # cap.set(cv.CAP_PROP_FRAME_WIDTH,  1280)
-    # cap.set(cv.CAP_PROP_FRAME_HEIGHT, 720)
+    cap.set(cv.CAP_PROP_FRAME_WIDTH,  1280)
+    cap.set(cv.CAP_PROP_FRAME_HEIGHT, 720)
 
     while ren.running():
         res, img = cap.read()
@@ -63,9 +59,6 @@ def cv_thread_fn( ren: idk.Renderer, handDetector: HandDetector, faceDetector: F
 
         faceDetector.detect(img)
         img = faceDetector.draw(img)
-
-        global hgrabbing
-        handDetector.grabbing = hgrabbing
 
         handDetector.detect(img)
         img = handDetector.draw(img)
@@ -185,16 +178,19 @@ def gl_thread_fn( ren: idk.Renderer, handDetector: HandDetector, faceDetector: F
             invLA = glm.inverse(methods.hand_compute_orientation(handRenderer_L.wlms))
             rotation = invLA
 
-            handRenderer_L.setRotation(rotation)
-            handRenderer_L.setTranslation(glm.translate(glm.vec3(0)))
+            handRenderer_L.setRotation(glm.rotate(-yaw, glm.vec3(0, 1, 0)))
+            handRenderer_L.setTranslation(glm.translate(cam.position()))
             # ----------------------------------------------------------------------------------
 
 
             # Make dist(model_hand, 3D_camera) == dist(real_hand, real_camera)
             # ----------------------------------------------------------------------------------
-            # face_depth = faceController.getDepth()
-            # hand_depth = 0.58 * handRenderer_L.calculateDepth()
-            # handRenderer_L.depthCorrection(2 * -(face_depth - hand_depth))
+            face_depth = faceController.getDepth()
+            hand_depth = handRenderer_L.calculateDepth()
+
+            print("%.2f,  %.2f" % (face_depth, hand_depth))
+
+            handRenderer_L.depthCorrection(2 * -(face_depth - hand_depth))
             # ----------------------------------------------------------------------------------
 
 

@@ -8,6 +8,17 @@ import numpy as np
 import glm as glm
 from .camera import *
 
+
+
+
+
+"""
+    Not much to see here, just a bunch of poorly ported C++ code.
+"""
+
+
+
+
 VERTEX_NUM_ELEMENTS = 8
 SIZEOF_FLOAT = sizeof(ctypes.c_float)
 SIZEOF_VERTEX = VERTEX_NUM_ELEMENTS*SIZEOF_FLOAT
@@ -214,6 +225,10 @@ class Renderer:
 
     def height(self) -> int:
         return self.__height
+    
+    def windowSize(self) -> tuple[int, int]:
+        return (self.__width, self.__height)
+
 
     def beginFrame(self, cam: Camera) -> None:
         glViewport(0, 0, self.__width, self.__height)
