@@ -35,14 +35,14 @@ def preprocess_img( img ):
     lap = cv.resize(lap, (0, 0), fx=2, fy=2, interpolation=cv.INTER_LINEAR)
     lap = cv.GaussianBlur(lap, (3, 3), 0)
 
-    lap = np.uint8(lap / 2)
+    lap = np.uint8(lap / 4)
 
     return img
 
 
 
 def cv_thread_fn( ren: idk.Renderer, handDetector: HandDetector, faceDetector: FaceDetector ):
-    cap = cv.VideoCapture(0)
+    cap = cv.VideoCapture("hand1.jpg")
     # cap.set(cv.CAP_PROP_FRAME_WIDTH,  1280)
     # cap.set(cv.CAP_PROP_FRAME_HEIGHT, 720)
 
