@@ -26,7 +26,7 @@ import sys
 
 
 def cv_thread_fn( ren: idk.Renderer, handDetector: HandDetector, faceDetector: FaceDetector ):
-    cap = cv.VideoCapture("hand1.jpg")
+    cap = cv.VideoCapture(0)
     # cap.set(cv.CAP_PROP_FRAME_WIDTH,  1280)
     # cap.set(cv.CAP_PROP_FRAME_HEIGHT, 720)
 
@@ -74,7 +74,6 @@ def gl_thread_fn( ren: idk.Renderer, handDetector: HandDetector, faceDetector: F
     texshader = idk.compileShaderProgram("src/shaders/", "general.vs", "textured.fs")
 
     grass_mh    = idk.loadOBJ(b"models/grass.obj", b"textures/grass.png")
-    demoroom_mh = idk.loadOBJ(b"models/report.obj", b"textures/report.png")
     sky_mh      = idk.loadOBJ(b"models/skybox.obj", b"textures/skybox.png")
     cockpit_mh  = idk.loadOBJ(b"models/cockpit.obj", b"textures/palette.png")
 
